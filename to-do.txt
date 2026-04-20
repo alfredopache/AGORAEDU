@@ -1,0 +1,4 @@
+SEO
+Skeleton Renders
+Update phone UX UI
+Include Sanity for "static" texts
