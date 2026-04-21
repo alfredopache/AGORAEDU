@@ -548,6 +548,47 @@ const examQuestions = [
     },
     isActive: true,
   },
+  // ==================== PREGUNTAS ADICIONALES: COMENTARIO / HISTORIA ====================
+  {
+    _type: 'examQuestion',
+    question: 'Lee el siguiente fragmento: "El progreso técnico transformó la vida cotidiana". ¿Cuál es la idea principal del fragmento? ',
+    subject: 'lengua',
+    topic: 'Comentario',
+    difficulty: 'intermedio',
+    options: [
+      { text: 'Que el progreso técnico cambia la vida cotidiana', isCorrect: true },
+      { text: 'Que la vida cotidiana no cambia con la técnica', isCorrect: false },
+      { text: 'Que la técnica es siempre negativa', isCorrect: false },
+      { text: 'Que el fragmento habla de economía', isCorrect: false },
+    ],
+    explanation: 'El fragmento destaca la transformación de la vida cotidiana gracias al progreso técnico, esa es la idea principal.',
+    source: {
+      name: 'Ministerio de Educación',
+      year: 2024,
+      region: 'Nacional',
+    },
+    isActive: true,
+  },
+  {
+    _type: 'examQuestion',
+    question: '¿Qué suceso se considera frecuentemente como punto de inflexión entre la Edad Media y la Edad Moderna en Europa?',
+    subject: 'sociales',
+    topic: 'Historia',
+    difficulty: 'intermedio',
+    options: [
+      { text: 'La caída de Constantinopla en 1453', isCorrect: true },
+      { text: 'La Revolución Industrial en el siglo XVIII', isCorrect: false },
+      { text: 'La Primera Guerra Mundial', isCorrect: false },
+      { text: 'La invención de la imprenta en 1840', isCorrect: false },
+    ],
+    explanation: 'La caída de Constantinopla en 1453 suele considerarse uno de los hitos que marcan el fin de la Edad Media y el inicio de la Edad Moderna.',
+    source: {
+      name: 'Ministerio de Educación',
+      year: 2023,
+      region: 'Nacional',
+    },
+    isActive: true,
+  },
 ]
 
 async function seedExamQuestions() {

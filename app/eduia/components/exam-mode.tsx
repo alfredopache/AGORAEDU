@@ -54,8 +54,11 @@ type ExamState = "setup" | "taking" | "results"
 const SUBJECT_OPTIONS = [
   { value: "matematicas", label: "Matemáticas", emoji: "🔢", color: "from-pink-500 to-red-500" },
   { value: "lengua", label: "Lengua Castellana", emoji: "📝", color: "from-purple-500 to-indigo-500" },
+  { value: "lengua:comentario", label: "Lengua — Comentario de texto", emoji: "📄", color: "from-violet-500 to-indigo-500" },
   { value: "ingles", label: "Inglés", emoji: "🌍", color: "from-blue-500 to-cyan-500" },
   { value: "sociales", label: "Ciencias Sociales", emoji: "🌐", color: "from-green-500 to-emerald-500" },
+  { value: "sociales:historia", label: "Sociales — Historia", emoji: "🏛️", color: "from-emerald-500 to-green-500" },
+  { value: "tic", label: "TIC", emoji: "💻", color: "from-sky-500 to-cyan-500" },
   { value: "ambito_linguistico", label: "Ámbito lingüístico-comunicativo", emoji: "🗣️", color: "from-indigo-500 to-purple-500" },
   { value: "ambito_cientifico", label: "Ámbito científico-matemático", emoji: "🔬", color: "from-green-600 to-emerald-500" },
   { value: "mixto", label: "Examen Completo (Todas)", emoji: "🎯", color: "from-orange-500 to-yellow-500" },
@@ -95,9 +98,23 @@ export function ExamMode({ sessionId }: ExamModeProps) {
 
     setIsLoading(true)
     try {
-      const response = await fetch(
-        `/api/exam/questions?subject=${selectedSubject}&difficulty=${selectedDifficulty}&count=${questionCount}`
-      )
+      // soportar subject con topic: e.g. 'lengua:comentario'
+      let subjectParam = selectedSubject
+      let topicParam: string | undefined = undefined
+      if (selectedSubject.includes(':')) {
+        const parts = selectedSubject.split(':')
+        subjectParam = parts[0]
+        topicParam = parts.slice(1).join(':')
+      }
+
+      const params = new URLSearchParams({
+        subject: subjectParam,
+        difficulty: selectedDifficulty,
+        count: questionCount.toString(),
+      })
+      if (topicParam) params.set('topic', topicParam)
+
+      const response = await fetch(`/api/exam/questions?${params.toString()}`)
       
       if (!response.ok) {
         throw new Error("Error obteniendo preguntas")

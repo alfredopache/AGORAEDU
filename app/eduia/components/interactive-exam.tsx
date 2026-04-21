@@ -28,6 +28,7 @@ interface InteractiveExamProps {
     subject: string
     difficulty: string
     count: number
+    topic?: string
   }
   onComplete: (results: ExamResults) => void
   onCancel: () => void
@@ -62,6 +63,7 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
         difficulty: config.difficulty,
         count: config.count.toString(),
       })
+      if (config.topic) params.set('topic', config.topic)
       
       const response = await fetch(`/api/exam/questions?${params}`)
       if (response.ok) {

@@ -134,6 +134,7 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
 
     // Detección de ámbito/sujeto
     let subject = 'mixto'
+    let topic: string | undefined = undefined
 
     // Si el usuario menciona explícitamente un ámbito
     if (/ambit?o|ámbito/.test(lowerText)) {
@@ -150,10 +151,12 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
         subject = 'matematicas'
       } else if (/(lengua|gram[áa]tica|ortograf|comentario)/i.test(lowerText)) {
         subject = 'lengua'
+        if (/comentario/.test(lowerText)) topic = 'Comentario'
       } else if (/(ingl[eé]s|english)/i.test(lowerText)) {
         subject = 'ingles'
       } else if (/(historia|geograf|sociales)/i.test(lowerText)) {
         subject = 'sociales'
+        if (/historia/.test(lowerText)) topic = 'Historia'
       }
     }
 
@@ -197,7 +200,7 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
 
     return {
       isExam: true,
-      config: { subject, difficulty, count },
+      config: { subject, difficulty, count, topic },
     }
   }
 

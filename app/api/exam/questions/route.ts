@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
     const subject = searchParams.get("subject")
     const difficulty = searchParams.get("difficulty")
     const count = parseInt(searchParams.get("count") || "10")
+    const topic = searchParams.get("topic") // optional topic filter (e.g., 'Comentario', 'Historia')
 
     if (!subject || !difficulty) {
       return NextResponse.json(
@@ -25,7 +26,8 @@ export async function GET(request: NextRequest) {
 
     // Si es mixto, obtener preguntas de todas las materias
     if (subject === "mixto") {
-      const query = `*[_type == "examQuestion" && difficulty == $difficulty && isActive == true] {
+      const params: any = { difficulty }
+      let query = `*[_type == "examQuestion" && difficulty == $difficulty && isActive == true] {
         _id,
         question,
         subject,
@@ -36,7 +38,22 @@ export async function GET(request: NextRequest) {
         source
       }`
 
-      const allQuestions = await client.fetch(query, { difficulty })
+      if (topic) {
+        // Usar match para permitir coincidencias parciales en topic
+        query = `*[_type == "examQuestion" && difficulty == $difficulty && topic match $topic && isActive == true] {
+          _id,
+          question,
+          subject,
+          topic,
+          difficulty,
+          options,
+          explanation,
+          source
+        }`
+        params.topic = `*${topic}*`
+      }
+
+      const allQuestions = await client.fetch(query, params)
       // Mezclar aleatoriamente y devolver exactamente 'count'
       const shuffled = allQuestions.sort(() => Math.random() - 0.5)
       return NextResponse.json({ questions: shuffled.slice(0, count) })
@@ -45,7 +62,8 @@ export async function GET(request: NextRequest) {
     // Si es un ámbito compuesto, buscar por varios subjects
     if (AMBITO_MAP[subject]) {
       const subjects = AMBITO_MAP[subject]
-      const query = `*[_type == "examQuestion" && subject in $subjects && difficulty == $difficulty && isActive == true] {
+      const params: any = { subjects, difficulty }
+      let query = `*[_type == "examQuestion" && subject in $subjects && difficulty == $difficulty && isActive == true] {
         _id,
         question,
         subject,
@@ -56,13 +74,29 @@ export async function GET(request: NextRequest) {
         source
       }`
 
-      const questions = await client.fetch(query, { subjects, difficulty })
+      if (topic) {
+        query = `*[_type == "examQuestion" && subject in $subjects && difficulty == $difficulty && topic match $topic && isActive == true] {
+          _id,
+          question,
+          subject,
+          topic,
+          difficulty,
+          options,
+          explanation,
+          source
+        }`
+        params.topic = `*${topic}*`
+      }
+
+      const questions = await client.fetch(query, params)
       const shuffled = questions.sort(() => Math.random() - 0.5)
       return NextResponse.json({ questions: shuffled.slice(0, count) })
     }
 
     // Caso por subject individual
-    const query = `*[_type == "examQuestion" && subject == $subject && difficulty == $difficulty && isActive == true] {
+    // Caso por subject individual (posible filtro por topic)
+    const params: any = { subject, difficulty }
+    let query = `*[_type == "examQuestion" && subject == $subject && difficulty == $difficulty && isActive == true] {
       _id,
       question,
       subject,
@@ -73,7 +107,21 @@ export async function GET(request: NextRequest) {
       source
     }`
 
-    const questions = await client.fetch(query, { subject, difficulty })
+    if (topic) {
+      query = `*[_type == "examQuestion" && subject == $subject && difficulty == $difficulty && topic match $topic && isActive == true] {
+        _id,
+        question,
+        subject,
+        topic,
+        difficulty,
+        options,
+        explanation,
+        source
+      }`
+      params.topic = `*${topic}*`
+    }
+
+    const questions = await client.fetch(query, params)
     const shuffled = questions.sort(() => Math.random() - 0.5)
     return NextResponse.json({ questions: shuffled.slice(0, count) })
   } catch (error) {
