@@ -56,6 +56,8 @@ const SUBJECT_OPTIONS = [
   { value: "lengua", label: "Lengua Castellana", emoji: "📝", color: "from-purple-500 to-indigo-500" },
   { value: "ingles", label: "Inglés", emoji: "🌍", color: "from-blue-500 to-cyan-500" },
   { value: "sociales", label: "Ciencias Sociales", emoji: "🌐", color: "from-green-500 to-emerald-500" },
+  { value: "ambito_linguistico", label: "Ámbito lingüístico-comunicativo", emoji: "🗣️", color: "from-indigo-500 to-purple-500" },
+  { value: "ambito_cientifico", label: "Ámbito científico-matemático", emoji: "🔬", color: "from-green-600 to-emerald-500" },
   { value: "mixto", label: "Examen Completo (Todas)", emoji: "🎯", color: "from-orange-500 to-yellow-500" },
 ]
 

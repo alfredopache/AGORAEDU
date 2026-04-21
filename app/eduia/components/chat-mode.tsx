@@ -127,40 +127,77 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
 
   const detectExamRequest = (text: string): { isExam: boolean; config?: any } => {
     const lowerText = text.toLowerCase()
-    
-    // Palabras clave para detectar examen
-    const examKeywords = ['examen', 'prueba', 'test', 'evalua', 'evalúa', 'evaluame', 'hazme un examen', 'quiero un examen']
-    const isExamRequest = examKeywords.some(keyword => lowerText.includes(keyword))
-    
+
+    // Detectar si el usuario pide un examen/prueba/ejercicio
+    const isExamRequest = /\b(examen|prueba|test|ejercicio|ejercicios|pregunta|preguntas|dame|hazme|quiero)\b/i.test(lowerText)
     if (!isExamRequest) return { isExam: false }
 
-    // Detectar materia
+    // Detección de ámbito/sujeto
     let subject = 'mixto'
-    if (lowerText.includes('matemática') || lowerText.includes('mate') || lowerText.includes('número')) {
-      subject = 'matematicas'
-    } else if (lowerText.includes('lengua') || lowerText.includes('gramática') || lowerText.includes('ortografía')) {
-      subject = 'lengua'
-    } else if (lowerText.includes('inglés') || lowerText.includes('ingles') || lowerText.includes('english')) {
-      subject = 'ingles'
-    } else if (lowerText.includes('sociales') || lowerText.includes('historia') || lowerText.includes('geografía')) {
-      subject = 'sociales'
+
+    // Si el usuario menciona explícitamente un ámbito
+    if (/ambit?o|ámbito/.test(lowerText)) {
+      if (/(lingu[ií]stic|lingü|comunic)/i.test(lowerText) || /linguistico|lingüistico|comunicativo|comunicacion/.test(lowerText)) {
+        subject = 'ambito_linguistico'
+      } else if (/(cientific|matem|tic|ciencias)/i.test(lowerText)) {
+        subject = 'ambito_cientifico'
+      }
     }
 
-    // Detectar dificultad
+    // Si no se detectó ámbito, buscar materia específica
+    if (subject === 'mixto') {
+      if (/(matem|mate)/i.test(lowerText)) {
+        subject = 'matematicas'
+      } else if (/(lengua|gram[áa]tica|ortograf|comentario)/i.test(lowerText)) {
+        subject = 'lengua'
+      } else if (/(ingl[eé]s|english)/i.test(lowerText)) {
+        subject = 'ingles'
+      } else if (/(historia|geograf|sociales)/i.test(lowerText)) {
+        subject = 'sociales'
+      }
+    }
+
+    // Detección de dificultad
     let difficulty = 'intermedio'
-    if (lowerText.includes('básico') || lowerText.includes('basico') || lowerText.includes('fácil') || lowerText.includes('facil')) {
-      difficulty = 'basico'
-    } else if (lowerText.includes('avanzado') || lowerText.includes('difícil') || lowerText.includes('dificil')) {
-      difficulty = 'avanzado'
+    if (/(b[aá]sico|f[aá]cil|facil)/i.test(lowerText)) difficulty = 'basico'
+    if (/(avanzad|dif[ií]cil|dificil)/i.test(lowerText)) difficulty = 'avanzado'
+
+    // Detección robusta de la cantidad de preguntas
+    const defaultCount = 10
+    const numbers = Array.from(text.matchAll(/\d+/g)).map((m) => ({ value: parseInt(m[0], 10), index: m.index ?? 0 }))
+
+    let count = defaultCount
+    if (numbers.length > 0) {
+      // Preferir números cerca de palabras tipo 'pregunta', 'ejercicio', 'examen'
+      const questionWords = /\b(pregunta|preguntas|ejercicio|ejercicios|problema|problemas|test|examen|ejercicios)\b/i
+      const optionWords = /\b(opcion|opciones|respuesta|respuestas)\b/i
+
+      const nearQuestion = numbers.find((n) => {
+        const start = Math.max(0, n.index - 30)
+        const ctx = text.slice(start, n.index + 30)
+        return questionWords.test(ctx) && !optionWords.test(ctx)
+      })
+
+      if (nearQuestion) {
+        count = nearQuestion.value
+      } else {
+        // Si no hay número claramente ligado a preguntas, tomar el primer número que no esté ligado a 'opciones'
+        const nonOption = numbers.find((n) => {
+          const start = Math.max(0, n.index - 30)
+          const ctx = text.slice(start, n.index + 30)
+          return !optionWords.test(ctx)
+        })
+        if (nonOption) count = nonOption.value
+        else count = Math.max(...numbers.map((n) => n.value))
+      }
     }
 
-    // Detectar cantidad (buscar números)
-    const numberMatch = text.match(/\d+/)
-    const count = numberMatch ? Math.min(Math.max(parseInt(numberMatch[0]), 5), 30) : 10
+    // Limitar rango razonable
+    count = Math.min(Math.max(Number(count) || defaultCount, 5), 30)
 
     return {
       isExam: true,
-      config: { subject, difficulty, count }
+      config: { subject, difficulty, count },
     }
   }
 
