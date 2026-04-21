@@ -12,6 +12,7 @@
     "seed:jorge": "tsx scripts/seed-jorge.ts"
   },
   "dependencies": {
+    "@babel/runtime": "^7.29.2",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.4",
     "@sanity/client": "^7.14.1",
