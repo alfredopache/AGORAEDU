@@ -1,8 +1,8 @@
-# 🤖 EduIA - Asistente Educativo para Grado Medio
+# 🤖 Acceso IA - Asistente Educativo para Grado Medio
 
 ## 📋 Descripción
 
-EduIA es un chatbot educativo **completamente GRATUITO** especializado en ayudar a estudiantes españoles a preparar la **prueba de acceso a ciclos formativos de grado medio**.
+Acceso IA es un chatbot educativo **completamente GRATUITO** especializado en ayudar a estudiantes españoles a preparar la **prueba de acceso a ciclos formativos de grado medio**.
 
 ### 🎯 Materias Cubiertas
 
@@ -43,10 +43,10 @@ EduIA es un chatbot educativo **completamente GRATUITO** especializado en ayudar
 npm run dev
 ```
 
-### Paso 4: ¡Usar EduIA!
+### Paso 4: ¡Usar Acceso IA!
 
 1. Abre tu navegador en `http://localhost:3000`
-2. Haz clic en el botón morado **"🤖 EDUIA"** en la navegación
+2. Haz clic en el botón morado **"🤖 Acceso IA"** en la navegación
 3. ¡Empieza a hacer preguntas!
 
 ---
@@ -135,7 +135,7 @@ Esto es **más que suficiente** para uso personal y estudiantes.
 
 ---
 
-## 🎓 Consejos para Aprovechar al Máximo EduIA
+## 🎓 Consejos para Aprovechar al Máximo Acceso IA
 
 1. **Sé específico**: Cuanto más detallada sea tu pregunta, mejor será la respuesta
 2. **Pide ejercicios**: No solo teoría, practica con ejercicios
@@ -174,7 +174,7 @@ Este proyecto educativo es de código abierto y está disponible para ayudar a e
 
 ## 🌟 ¡Importante!
 
-**EduIA es una herramienta de apoyo educativo**. Está diseñada para ayudarte a aprender y entender conceptos, no para hacer trampas. Úsala como complemento a tus estudios normales.
+**Acceso IA es una herramienta de apoyo educativo**. Está diseñada para ayudarte a aprender y entender conceptos, no para hacer trampas. Úsala como complemento a tus estudios normales.
 
 **¡Mucha suerte en tu prueba de acceso! 🎯📚**
 

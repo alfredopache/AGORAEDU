@@ -93,11 +93,11 @@ function generateAnalysis(
   } else if (score >= 60) {
     strengths.push("Comprensión básica sólida")
     weaknesses.push("Algunos conceptos necesitan refuerzo")
-    recommendations = "Enfócate en los temas donde fallaste. Practica más ejercicios similares y pide explicaciones detalladas a EduIA en modo Chat."
+      recommendations = "Enfócate en los temas donde fallaste. Practica más ejercicios similares y pide explicaciones detalladas a Acceso IA en modo Chat."
   } else {
     weaknesses.push("Necesitas reforzar los fundamentos")
     weaknesses.push("Considera repasar el temario completo")
-    recommendations = "Te recomendamos usar el modo Chat de EduIA para resolver dudas específicas antes de hacer más exámenes. Empieza con nivel básico y sube gradualmente."
+      recommendations = "Te recomendamos usar el modo Chat de Acceso IA para resolver dudas específicas antes de hacer más exámenes. Empieza con nivel básico y sube gradualmente."
   }
 
   // Análisis por materia

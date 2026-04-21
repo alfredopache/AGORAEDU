@@ -566,7 +566,7 @@ async function seedExamQuestions() {
     console.log(`  - Lengua: ${examQuestions.filter(q => q.subject === 'lengua').length}`)
     console.log(`  - Inglés: ${examQuestions.filter(q => q.subject === 'ingles').length}`)
     console.log(`  - Ciencias Sociales: ${examQuestions.filter(q => q.subject === 'sociales').length}`)
-    console.log('\n🎉 ¡Las preguntas ya están disponibles en EduIA!')
+    console.log('\n🎉 ¡Las preguntas ya están disponibles en Acceso IA!')
   } catch (error) {
     console.error('❌ Error durante el seed:', error)
     process.exit(1)

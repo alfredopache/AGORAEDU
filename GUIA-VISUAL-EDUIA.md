@@ -1,4 +1,4 @@
-# 🎯 GUÍA VISUAL PASO A PASO - Activar EduIA
+# 🎯 GUÍA VISUAL PASO A PASO - Activar Acceso IA
 
 ## 📍 PASO 1: Obtener tu API Key GRATUITA
 
@@ -17,7 +17,7 @@
 ### 1.3 - Generar API Key
 ```
 🔑 Una vez dentro, haz clic en "Create API Key"
-📝 Dale un nombre (ejemplo: "EduIA Blog")
+📝 Dale un nombre (ejemplo: "Acceso IA Blog")
 📋 COPIA la clave que aparece (empieza con: gsk_...)
 ⚠️  IMPORTANTE: La clave solo se muestra UNA VEZ, guárdala bien
 ```
@@ -87,17 +87,17 @@ Deberías ver algo como:
 
 ---
 
-## 📍 PASO 4: ¡Usar EduIA!
+## 📍 PASO 4: ¡Usar Acceso IA!
 
 ### 4.1 - Abrir el navegador
 ```
 🌐 Abre: http://localhost:3000
 ```
 
-### 4.2 - Navegar a EduIA
+### 4.2 - Navegar a Acceso IA
 ```
 👀 Busca en la barra de navegación el botón morado:
-   🤖 EDUIA
+   🤖 Acceso IA
 🖱️  Haz clic en él
 ```
 
@@ -107,14 +107,14 @@ Deberías ver algo como:
    "Explícame las ecuaciones de segundo grado"
 
 📤 Presiona Enter o haz clic en "Enviar"
-🤖 ¡EduIA te responderá en segundos!
+🤖 ¡Acceso IA te responderá en segundos!
 ```
 
 ---
 
 ## 🎉 ¡FELICIDADES!
 
-Si llegaste hasta aquí, EduIA ya está funcionando. Ahora puedes:
+Si llegaste hasta aquí, Acceso IA ya está funcionando. Ahora puedes:
 
 ```
 ✅ Hacer preguntas sobre Lengua, Matemáticas, Inglés o Ciencias Sociales
@@ -142,7 +142,7 @@ Si llegaste hasta aquí, EduIA ya está funcionando. Ahora puedes:
 
 ---
 
-### 🔴 No veo el botón "EDUIA" en la navegación
+### 🔴 No veo el botón "ACCESO IA" en la navegación
 
 **Solución:**
 1. ✅ Refresca la página (F5 o Ctrl+R)
@@ -192,16 +192,16 @@ Marca cada punto cuando lo completes:
 [ ] ✅ Reinicié el servidor (npm run dev)
 [ ] ✅ El servidor está corriendo sin errores
 [ ] ✅ Abrí http://localhost:3000
-[ ] ✅ Veo el botón "🤖 EDUIA" en la navegación
+[ ] ✅ Veo el botón "🤖 Acceso IA" en la navegación
 [ ] ✅ Hice clic en el botón
 [ ] ✅ Veo la interfaz del chatbot
 [ ] ✅ Escribí una pregunta de prueba
-[ ] ✅ EduIA me respondió correctamente
+[ ] ✅ Acceso IA me respondió correctamente
 ```
 
 ---
 
-## 🎓 Primeros Pasos con EduIA
+## 🎓 Primeros Pasos con Acceso IA
 
 ### Preguntas de prueba para empezar:
 
@@ -240,7 +240,7 @@ Marca cada punto cuando lo completes:
 1. **Sé específico:** Cuanto más detallada tu pregunta, mejor la respuesta
 2. **Pide ejemplos:** "Dame ejemplos de..." siempre ayuda
 3. **Solicita ejercicios:** "Dame 10 ejercicios de..." para practicar
-4. **Mantén la conversación:** EduIA recuerda el contexto anterior
+4. **Mantén la conversación:** Acceso IA recuerda el contexto anterior
 5. **Pide aclaraciones:** Si no entiendes, pregunta de nuevo de otra forma
 
 ---
@@ -257,7 +257,7 @@ Lee estos archivos en orden si necesitas más información:
 
 ## 🚀 ¡Todo Listo!
 
-**Si completaste todos los pasos, EduIA ya está funcionando en tu proyecto.**
+**Si completaste todos los pasos, Acceso IA ya está funcionando en tu proyecto.**
 
 ```
 🎯 Objetivo: Ayudarte a aprobar el examen de acceso a Grado Medio

@@ -1,4 +1,4 @@
-# 🚀 EDUIA 2.0 - GUÍA COMPLETA
+# 🚀 ACCESO IA 2.0 - GUÍA COMPLETA
 
 ## 📋 Índice
 1. [Características Principales](#características-principales)
@@ -82,10 +82,10 @@ Este comando cargará preguntas de:
 npm run dev
 ```
 
-### Paso 5: Acceder a EduIA
+### Paso 5: Acceder a Acceso IA
 
 1. Abre: http://localhost:3000
-2. Haz clic en el botón morado **🤖 EDUIA**
+2. Haz clic en el botón morado **🤖 Acceso IA**
 3. ¡Empieza a usar!
 
 ---
@@ -267,7 +267,7 @@ Las conversaciones se etiquetan por color según materia:
 
 ### Generación Automática
 
-Después de cada examen, EduIA analiza:
+Después de cada examen, Acceso IA analiza:
 1. Tu puntuación global
 2. Tiempo empleado por pregunta
 3. Patrones de aciertos/errores
@@ -397,34 +397,34 @@ scripts/
 #### 1️⃣ **Estudiar Teoría**
 ```
 Usuario: "Explícame el teorema de Pitágoras"
-EduIA: [Explicación detallada con ejemplos y diagramas verbales]
+Acceso IA: [Explicación detallada con ejemplos y diagramas verbales]
 
 Usuario: "Dame un ejemplo práctico"
-EduIA: [Ejemplo con números concretos y solución paso a paso]
+Acceso IA: [Ejemplo con números concretos y solución paso a paso]
 ```
 
 #### 2️⃣ **Generar Ejercicios**
 ```
 Usuario: "Dame 10 ejercicios de fracciones"
-EduIA: [Lista de 10 ejercicios con diferentes dificultades]
+Acceso IA: [Lista de 10 ejercicios con diferentes dificultades]
 
 Usuario: "Ayúdame con el ejercicio 5"
-EduIA: [Solución paso a paso del ejercicio 5]
+Acceso IA: [Solución paso a paso del ejercicio 5]
 ```
 
 #### 3️⃣ **Resolver Dudas**
 ```
 Usuario: "¿Cuándo se usa 'haber' y cuándo 'a ver'?"
-EduIA: [Explicación con reglas y múltiples ejemplos]
+Acceso IA: [Explicación con reglas y múltiples ejemplos]
 
 Usuario: "¿Y 'haver' existe?"
-EduIA: [Aclaración sobre el error ortográfico común]
+Acceso IA: [Aclaración sobre el error ortográfico común]
 ```
 
 #### 4️⃣ **Preparación Específica**
 ```
 Usuario: "¿Qué temas de historia suelen preguntar en el examen?"
-EduIA: [Lista de temas más frecuentes con contenido clave]
+Acceso IA: [Lista de temas más frecuentes con contenido clave]
 ```
 
 ### Modo Examen: Flujo Completo
@@ -649,7 +649,7 @@ Verás en consola:
 **Solución**:
 1. Inicia una conversación en modo Chat
 2. Envía al menos 1 mensaje
-3. Espera la respuesta de EduIA
+3. Espera la respuesta de Acceso IA
 4. La conversación se guarda automáticamente
 5. Refresca para ver en sidebar
 
@@ -692,7 +692,7 @@ Verás en consola:
 - [ ] **Estudio programado**: Calendario de repaso
 - [ ] **Más fuentes**: Más exámenes oficiales
 - [ ] **Exportar conversaciones**: PDF de tus chats
-- [ ] **Modo voz**: Hablar con EduIA
+- [ ] **Modo voz**: Hablar con Acceso IA
 - [ ] **Imágenes**: Soporte para problemas con gráficos
 - [ ] **Comunidad**: Compartir preguntas entre usuarios
 
@@ -760,7 +760,7 @@ npm run build
 
 ---
 
-## 🌟 Ventajas de EduIA 2.0
+## 🌟 Ventajas de Acceso IA 2.0
 
 | Característica | Beneficio |
 |---------------|-----------|
@@ -777,7 +777,7 @@ npm run build
 
 ## 🎯 Objetivos de Aprendizaje
 
-EduIA 2.0 está diseñado para ayudarte a:
+Acceso IA 2.0 está diseñado para ayudarte a:
 
 1. ✅ **Comprender conceptos** profundamente
 2. ✅ **Practicar** con casos reales
@@ -795,7 +795,7 @@ EduIA 2.0 está diseñado para ayudarte a:
 [ ] ✅ Groq API key configurada
 [ ] ✅ npm run seed:exam ejecutado
 [ ] ✅ npm run dev corriendo
-[ ] ✅ EduIA abierto en navegador
+[ ] ✅ Acceso IA abierto en navegador
 [ ] ✅ Primera conversación creada
 [ ] ✅ Primer examen completado
 ```

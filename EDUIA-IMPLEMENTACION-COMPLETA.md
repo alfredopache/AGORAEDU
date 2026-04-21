@@ -1,13 +1,13 @@
-# ✅ RESUMEN COMPLETO - EduIA Implementado
+# ✅ RESUMEN COMPLETO - Acceso IA Implementado
 
 ## 🎉 ¡Todo está listo! Aquí está lo que hemos creado:
 
 ### ✨ Archivos Creados/Modificados:
 
 #### 1. Navegación Actualizada
-- ✅ **components/blog-nav.tsx** - Agregado enlace "🤖 EduIA" con estilo especial morado/rosa
+- ✅ **components/blog-nav.tsx** - Agregado enlace "🤖 Acceso IA" con estilo especial morado/rosa
 
-#### 2. Página Principal de EduIA
+- #### 2. Página Principal de Acceso IA
 - ✅ **app/eduia/page.tsx** - Página con diseño atractivo y tarjetas informativas
 - ✅ **app/eduia/chat-client.tsx** - Componente de chatbot interactivo completo
 
@@ -23,7 +23,7 @@
 
 ---
 
-## 🚀 PASOS PARA ACTIVAR EDUIA
+## 🚀 PASOS PARA ACTIVAR ACCESO IA
 
 ### Paso 1: Obtener API Key GRATUITA de Groq
 
@@ -53,10 +53,10 @@
 npm run dev
 ```
 
-### Paso 4: ¡Probar EduIA!
+### Paso 4: ¡Probar Acceso IA!
 
 1. Abre tu navegador en: **http://localhost:3000**
-2. Verás en la navegación un botón morado que dice **"🤖 EDUIA"**
+2. Verás en la navegación un botón morado que dice **"🤖 Acceso IA"**
 3. Haz clic en él
 4. ¡Empieza a chatear!
 
@@ -129,7 +129,7 @@ npm run dev
 
 ## 🎨 Diseño Visual
 
-El botón "EduIA" en la navegación tiene:
+El botón "Acceso IA" en la navegación tiene:
 - 🌈 Gradiente morado a rosa
 - 🤖 Emoji de robot
 - ✨ Efecto hover con escala
@@ -203,7 +203,7 @@ INICIO-RAPIDO-EDUIA.md       # Guía rápida
 
 ---
 
-## 🎓 Cómo Usar EduIA Efectivamente
+## 🎓 Cómo Usar Acceso IA Efectivamente
 
 ### 1. Para Estudiar Teoría
 ```
@@ -237,7 +237,7 @@ INICIO-RAPIDO-EDUIA.md       # Guía rápida
 
 ## 🚀 Próximos Pasos Recomendados
 
-Una vez que EduIA esté funcionando, puedes:
+Una vez que Acceso IA esté funcionando, puedes:
 
 1. **Probar diferentes tipos de preguntas**
 2. **Solicitar ejercicios prácticos**
@@ -284,7 +284,7 @@ npm run build
 
 ## ✅ Checklist Final
 
-Antes de usar EduIA, asegúrate de:
+Antes de usar Acceso IA, asegúrate de:
 
 - [ ] Tener Node.js instalado
 - [ ] Haber ejecutado `npm install`
@@ -292,13 +292,13 @@ Antes de usar EduIA, asegúrate de:
 - [ ] Haber copiado la API key a `.env.local`
 - [ ] Haber reiniciado el servidor
 - [ ] Poder acceder a `http://localhost:3000`
-- [ ] Ver el botón morado "🤖 EDUIA" en la navegación
+- [ ] Ver el botón morado "🤖 Acceso IA" en la navegación
 
 ---
 
-## 🌟 ¡Disfruta de EduIA!
+## 🌟 ¡Disfruta de Acceso IA!
 
-**EduIA está diseñado para ser tu compañero de estudio personal, disponible 24/7, completamente gratis.**
+**Acceso IA está diseñado para ser tu compañero de estudio personal, disponible 24/7, completamente gratis.**
 
 Recuerda:
 - Es una herramienta de **apoyo educativo**

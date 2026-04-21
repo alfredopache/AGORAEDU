@@ -1,4 +1,4 @@
-# ⚡ PRUEBA RÁPIDA - EDUIA 3.0
+# ⚡ PRUEBA RÁPIDA - ACCESO IA 3.0
 
 ## 🎯 PARA PROBAR EN 2 MINUTOS
 
@@ -20,7 +20,7 @@ Espera: `✓ Ready in X.Xs`
 
 ```
 1. Abre: http://localhost:3000
-2. Click en "🤖 EDUIA"
+2. Click en "🤖 Acceso IA"
 3. Escribe: "Explícame las fracciones con ejemplos"
 4. Enviar
 5. ¡Verás texto con negritas, listas y código!
@@ -62,7 +62,7 @@ Espera: `✓ Ready in X.Xs`
 
 ## 🎮 COMANDOS DE PRUEBA
 
-Copia y pega estos en EduIA para probar:
+Copia y pega estos en Acceso IA para probar:
 
 ### **Markdown Rico:**
 ```
@@ -102,4 +102,4 @@ Copia y pega estos en EduIA para probar:
 
 ---
 
-**¡Listo! Ahora tienes EduIA con todas las mejoras.** 🎉
+**¡Listo! Ahora tienes Acceso IA con todas las mejoras.** 🎉

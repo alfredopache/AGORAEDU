@@ -1,6 +1,6 @@
-# ⚡ INICIO RÁPIDO - EduIA 2.0 (Versión Completa)
+# ⚡ INICIO RÁPIDO - Acceso IA 2.0 (Versión Completa)
 
-## 🎯 Para activar EduIA en 5 minutos:
+## 🎯 Para activar Acceso IA en 5 minutos:
 
 ### 1️⃣ Obtén tu API Key GRATIS
 Ve a: **https://console.groq.com/keys**
@@ -26,7 +26,7 @@ npm run dev
 ```
 
 ### 5️⃣ ¡Listo!
-Abre `http://localhost:3000` y haz clic en **🤖 EDUIA**
+Abre `http://localhost:3000` y haz clic en **🤖 Acceso IA**
 
 ---
 
@@ -68,7 +68,7 @@ Abre `http://localhost:3000` y haz clic en **🤖 EDUIA**
 - 📱 **Responsive**: Funciona perfecto en móvil y tablet
 - 🌙 **Modo oscuro**: Compatible con tema claro/oscuro
 - ✨ **Animaciones**: Transiciones suaves con Framer Motion
-- 🎨 **Gradientes**: Morado/Rosa para EduIA
+- 🎨 **Gradientes**: Morado/Rosa para Acceso IA
 
 ---
 

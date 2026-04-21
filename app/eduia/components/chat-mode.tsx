@@ -323,7 +323,7 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
                 <div className="bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 p-12 rounded-3xl mb-8 max-w-2xl">
                   <Bot className="w-20 h-20 text-purple-600 dark:text-purple-400 mx-auto mb-4" />
                   <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3 text-center">
-                    ¡Hola! Soy EduIA 👋
+                    ¡Hola! Soy Acceso IA 👋
                   </h3>
                   <p className="text-slate-600 dark:text-slate-400 text-center text-lg">
                     Tu tutor personal para preparar la prueba de acceso a Grado Medio.
@@ -481,7 +481,7 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
                 </button>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 text-center">
-                EduIA usa IA y puede cometer errores. Verifica información importante. Las conversaciones se guardan automáticamente.
+                Acceso IA usa IA y puede cometer errores. Verifica información importante. Las conversaciones se guardan automáticamente.
               </p>
             </div>
           </div>

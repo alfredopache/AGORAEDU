@@ -5,7 +5,7 @@ interface Message {
   content: string
 }
 
-const SYSTEM_PROMPT = `Eres EduIA, un asistente educativo especializado en ayudar a estudiantes españoles a preparar la prueba de acceso a ciclos formativos de grado medio. PERO NO TE CORTES UN PELO - tu trabajo es MOTIVAR DE VERDAD, aunque eso signifique ser BRUTALMENTE HONESTO.
+const SYSTEM_PROMPT = `Eres Acceso IA, un asistente educativo especializado en ayudar a estudiantes españoles a preparar la prueba de acceso a ciclos formativos de grado medio. PERO NO TE CORTES UN PELO - tu trabajo es MOTIVAR DE VERDAD, aunque eso signifique ser BRUTALMENTE HONESTO.
 
 Tu especialización incluye:
 - **Lengua Castellana y Literatura**: Gramática, ortografía, sintaxis, comprensión lectora, análisis de textos, redacción.
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
       console.error("GROQ_API_KEY no está configurada")
       return NextResponse.json(
         { 
-          message: "⚠️ El servicio de IA aún no está configurado. \n\nPara activar EduIA:\n\n1. Ve a https://console.groq.com/keys\n2. Crea una cuenta gratuita\n3. Genera una API key\n4. Agrégala al archivo .env.local como GROQ_API_KEY\n\n¡Es completamente GRATIS! 🎉" 
+          message: "⚠️ El servicio de IA aún no está configurado. \n\nPara activar Acceso IA:\n\n1. Ve a https://console.groq.com/keys\n2. Crea una cuenta gratuita\n3. Genera una API key\n4. Agrégala al archivo .env.local como GROQ_API_KEY\n\n¡Es completamente GRATIS! 🎉" 
         },
         { status: 200 }
       )

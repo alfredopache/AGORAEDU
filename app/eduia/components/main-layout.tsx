@@ -140,7 +140,7 @@ export function EduIAMainLayout() {
                     <span className="text-2xl">🤖</span>
                   </div>
                   <div>
-                    <h1 className="font-bold text-xl text-slate-900 dark:text-white">EduIA</h1>
+                    <h1 className="font-bold text-xl text-slate-900 dark:text-white">Acceso IA</h1>
                     <p className="text-xs text-slate-600 dark:text-slate-400">Asistente Educativo</p>
                   </div>
                 </div>
