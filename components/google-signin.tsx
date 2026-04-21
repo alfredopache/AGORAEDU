@@ -3,12 +3,21 @@
 import React from "react"
 import { signIn, signOut, useSession } from "next-auth/react"
 
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <circle cx="9" cy="9" r="9" fill="#FFFFFF" />
+      <text x="9" y="12" textAnchor="middle" fontSize="10" fontWeight="700" fill="#4285F4">G</text>
+    </svg>
+  )
+}
+
 export default function GoogleSignIn() {
   const { data: session, status } = useSession()
 
   if (status === "loading") {
     return (
-      <button className="px-3 py-2 rounded-md bg-slate-100 dark:bg-slate-800 text-sm" disabled>
+      <button className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-white/90 dark:bg-slate-800 border text-sm" disabled>
         Cargando...
       </button>
     )
@@ -24,7 +33,7 @@ export default function GoogleSignIn() {
         <span className="hidden md:inline text-sm">{session.user.name}</span>
         <button
           onClick={() => signOut()}
-          className="ml-2 px-3 py-2 rounded-md bg-slate-100 dark:bg-slate-800 text-sm"
+          className="ml-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/90 dark:bg-slate-800 border text-sm shadow-sm hover:shadow-md transition"
         >
           Cerrar sesión
         </button>
@@ -35,9 +44,12 @@ export default function GoogleSignIn() {
   return (
     <button
       onClick={() => signIn("google")}
-      className="px-3 py-2 rounded-md bg-gradient-to-r from-blue-500 to-sky-500 text-white text-sm"
+      aria-label="Iniciar sesión con Google"
+      className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-white text-slate-800 dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-transform active:scale-95 text-sm font-medium"
     >
-      Iniciar con Google
+      <GoogleIcon />
+      <span className="hidden sm:inline">Iniciar con Google</span>
+      <span className="sm:hidden">Google</span>
     </button>
   )
 }

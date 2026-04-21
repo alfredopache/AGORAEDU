@@ -25,9 +25,10 @@ export function LayoutContent({ children, latestProject }: LayoutContentProps) {
     <>
       {/* Pasamos los datos del proyecto a la Navbar */}
       {!isAdmin && <BlogNav latestProject={latestProject ?? undefined} />}
-      
-      {children}
-      
+      <main className="pt-20 md:pt-24 lg:pt-28 min-h-screen">
+        {children}
+      </main>
+
       {!isAdmin && <BlogFooter />}
     </>
   )

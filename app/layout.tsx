@@ -71,11 +71,11 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange={false} // Cambiado a FALSE para permitir la animación de cambio
         >
-          <LayoutContent latestProject={latestProject}>
-            <AuthSessionProvider>
+          <AuthSessionProvider>
+            <LayoutContent latestProject={latestProject}>
               {children}
-            </AuthSessionProvider>
-          </LayoutContent>
+            </LayoutContent>
+          </AuthSessionProvider>
           <Toaster position="bottom-right" richColors closeButton />
         </ThemeProvider>
       </body>
