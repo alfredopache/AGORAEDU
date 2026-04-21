@@ -2,8 +2,10 @@
 
 import { useState, useRef, useEffect } from "react"
 import { Send, Loader2, Bot, User, Sparkles, BookOpen, Lightbulb } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion as motionBase, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
+
+const motion = motionBase as any
 import { MarkdownRenderer } from "./markdown-renderer"
 import { InteractiveExam, ExamResultsView } from "./interactive-exam"
 
@@ -18,6 +20,23 @@ interface ChatModeProps {
   conversationId: string | null
   onConversationSaved: () => void
 }
+
+type ChatScope = "ambito_linguistico" | "ambito_cientifico"
+
+const SCOPE_OPTIONS: Array<{ value: ChatScope; label: string; emoji: string; description: string }> = [
+  {
+    value: "ambito_linguistico",
+    label: "Ámbito lingüístico-social",
+    emoji: "🗣️",
+    description: "Lengua, comunicación y ciencias sociales",
+  },
+  {
+    value: "ambito_cientifico",
+    label: "Ámbito científico-matemático",
+    emoji: "🔬",
+    description: "Matemáticas, lógica y ciencias naturales",
+  },
+]
 
 const EXAMPLE_QUESTIONS = [
   { text: "Explícame las ecuaciones de segundo grado paso a paso", emoji: "🔢", subject: "matematicas" },
@@ -39,6 +58,7 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingConversation, setIsLoadingConversation] = useState(false)
+  const [selectedScope, setSelectedScope] = useState<ChatScope>("ambito_linguistico")
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   
@@ -145,18 +165,12 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
       }
     }
 
-    // Si no se detectó ámbito, buscar materia específica
+    // Si no se detectó ámbito, buscar materia específica y mapearla a uno de los dos ámbitos
     if (subject === 'mixto') {
-      if (/(matem|mate)/i.test(lowerText)) {
-        subject = 'matematicas'
-      } else if (/(lengua|gram[áa]tica|ortograf|comentario)/i.test(lowerText)) {
-        subject = 'lengua'
-        if (/comentario/.test(lowerText)) topic = 'Comentario'
-      } else if (/(ingl[eé]s|english)/i.test(lowerText)) {
-        subject = 'ingles'
-      } else if (/(historia|geograf|sociales)/i.test(lowerText)) {
-        subject = 'sociales'
-        if (/historia/.test(lowerText)) topic = 'Historia'
+      if (/(matem|mate|cientific|cienci|tic|física|fisica|química|quimica|naturaleza|númer|numero|álgebra|algebra|geometr|problema)/i.test(lowerText)) {
+        subject = 'ambito_cientifico'
+      } else if (/(lengua|gram[áa]tica|ortograf|comentario|historia|geograf|sociales|cultura|ingl[eé]s|english|comunic)/i.test(lowerText)) {
+        subject = 'ambito_linguistico'
       }
     }
 
@@ -243,6 +257,7 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: updatedMessages,
+          scope: selectedScope,
         }),
       })
 
@@ -344,12 +359,12 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="h-full flex flex-col"
-    >
+    <div className="h-full min-h-0 flex flex-col">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      >
       {isLoadingConversation ? (
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
@@ -357,7 +372,36 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
       ) : (
         <>
           {/* Área de Mensajes */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
+            <div className="max-w-4xl mx-auto">
+              <div className="mb-6 rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 p-4">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-3">
+                  Selecciona un ámbito para Acceso IA:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {SCOPE_OPTIONS.map((scope) => (
+                    <button
+                      key={scope.value}
+                      onClick={() => setSelectedScope(scope.value)}
+                      className={cn(
+                        "rounded-2xl p-4 text-left border transition-all",
+                        selectedScope === scope.value
+                          ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-lg"
+                          : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-purple-300 dark:hover:border-purple-600"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{scope.emoji}</span>
+                        <div>
+                          <p className="font-semibold text-slate-900 dark:text-white">{scope.label}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{scope.description}</p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
             {messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center px-4">
                 <div className="bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 p-12 rounded-3xl mb-8 max-w-2xl">
@@ -367,7 +411,7 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
                   </h3>
                   <p className="text-slate-600 dark:text-slate-400 text-center text-lg">
                     Tu tutor personal para preparar la prueba de acceso a Grado Medio.
-                    Pregúntame sobre Lengua, Matemáticas, Inglés o Ciencias Sociales.
+                    Elige un ámbito y pregúntame dentro de él: lingüístico-social o científico-matemático.
                   </p>
                 </div>
 
@@ -418,16 +462,18 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
             ) : (
               <AnimatePresence>
                 {messages.map((message, index) => (
-                  <motion.div
+                  <div
                     key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
                     className={cn(
                       "flex gap-3",
                       message.role === "user" ? "justify-end" : "justify-start"
                     )}
                   >
-                    {message.role === "assistant" && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      {message.role === "assistant" && (
                       <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-2.5 rounded-xl h-fit flex-shrink-0">
                         <Bot className="w-5 h-5 text-white" />
                       </div>
@@ -465,28 +511,30 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
                       </div>
                     )}
                   </motion.div>
+                </div>
                 ))}
               </AnimatePresence>
             )}
 
             {isLoading && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex gap-3"
-              >
-                <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-2.5 rounded-xl h-fit">
-                  <Bot className="w-5 h-5 text-white" />
-                </div>
-                <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-lg border border-slate-200 dark:border-slate-700">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
-                    <span className="text-sm text-slate-600 dark:text-slate-400">
-                      Pensando...
-                    </span>
+              <div className="flex gap-3">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-2.5 rounded-xl h-fit">
+                    <Bot className="w-5 h-5 text-white" />
                   </div>
-                </div>
-              </motion.div>
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-lg border border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                        Pensando...
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
             )}
 
             <div ref={messagesEndRef} />
@@ -527,6 +575,7 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
           </div>
         </>
       )}
-    </motion.div>
+      </motion.div>
+    </div>
   )
 }

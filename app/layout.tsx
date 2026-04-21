@@ -1,6 +1,5 @@
 import React from "react"
 import type { Metadata } from 'next'
-import { Space_Grotesk, Inter } from 'next/font/google'
 import { ThemeProvider } from "@/components/theme-provider"
 import AuthSessionProvider from "@/components/session-provider"
 import { LayoutContent } from "@/components/layout-content"
@@ -9,16 +8,6 @@ import { Toaster } from "sonner" // Añadimos el Toaster para las sugerencias
 import { cn } from "@/lib/utils"
 
 import './globals.css'
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  variable: '--font-serif',
-})
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-sans',
-})
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://agoraedu.eu'),
@@ -59,7 +48,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="es" className={`${spaceGrotesk.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning>
       <body className={cn(
         "font-sans antialiased overflow-x-hidden min-h-screen",
         "bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-50",

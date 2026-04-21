@@ -1,5 +1,7 @@
 "use client"
-import { motion } from "framer-motion"
+import { motion as motionBase } from "framer-motion"
+
+const motion = motionBase as any
 
 export function AnimatedSection({ children }: { children: React.ReactNode }) {
   return (

@@ -1,7 +1,9 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { motion as motionBase } from "framer-motion"
 import { ArrowRight, Rocket, Mail, Instagram } from "lucide-react"
+
+const motion = motionBase as any
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { DataNodes } from "@/components/ui/data-nodes" 

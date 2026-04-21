@@ -11,7 +11,9 @@ import {
   ExternalLink,
   FileCode
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion as motionBase, AnimatePresence } from 'framer-motion'
+
+const motion = motionBase as any
 
 export const dynamic = 'force-dynamic'
 interface Resource {

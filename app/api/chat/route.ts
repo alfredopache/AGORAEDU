@@ -168,7 +168,7 @@ Recuerda: Tu objetivo NO es ser amable. Tu objetivo es que este estudiante APRUE
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages } = await request.json()
+    const { messages, scope } = await request.json()
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
@@ -191,10 +191,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Preparar mensajes para Groq
+    const scopePrompt =
+      scope === "ambito_linguistico"
+        ? "RESPONDE SIEMPRE DENTRO DEL ÁMBITO LINGÜÍSTICO-SOCIAL. CÉNTRATE EN lengua, comunicación, comprensión lectora, redacción y temas de ciencias sociales cuando sea necesario."
+        : scope === "ambito_cientifico"
+        ? "RESPONDE SIEMPRE DENTRO DEL ÁMBITO CIENTÍFICO-MATEMÁTICO. CÉNTRATE EN matemáticas, lógica, ciencias naturales, problemas numéricos y razonamiento científico."
+        : ""
+
     const formattedMessages = [
       {
         role: "system",
-        content: SYSTEM_PROMPT,
+        content: SYSTEM_PROMPT + (scopePrompt ? `\n\n${scopePrompt}` : ""),
       },
       ...messages.map((msg: Message) => ({
         role: msg.role,

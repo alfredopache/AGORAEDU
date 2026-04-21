@@ -1,8 +1,10 @@
 "use client"
 
 import { Plus, MessageSquare, Trash2, RefreshCw } from "lucide-react"
-import { motion } from "framer-motion"
+import { motion as motionBase } from "framer-motion"
 import { cn } from "@/lib/utils"
+
+const motion = motionBase as any
 import { Conversation } from "./main-layout"
 
 interface ConversationSidebarProps {

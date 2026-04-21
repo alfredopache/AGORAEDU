@@ -1,7 +1,9 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { motion as motionBase } from "framer-motion"
 import Image from "next/image"
+
+const motion = motionBase as any
 import { useRouter } from "next/navigation"
 import { Clock, ArrowRight, BookOpen } from "lucide-react"
 import { urlFor } from "@/lib/sanity" // Importamos el helper de imágenes
@@ -15,15 +17,18 @@ export default function BlogListClient({ entries }: { entries: BlogPost[] }) {
   return (
     <div className="grid gap-8 max-w-5xl mx-auto">
       {entries.map((entry, index) => (
-        <motion.article
+        <article
           key={entry.title}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: index * 0.1 }}
           onClick={() => router.push(`/blog/${entry.slug}`)}
           className="group relative flex flex-col gap-6 md:flex-row rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-6 backdrop-blur-md transition-all hover:shadow-2xl hover:shadow-blue-500/10 dark:hover:bg-white/10 cursor-pointer overflow-hidden"
         >
-          <div className="relative aspect-video md:aspect-square md:w-52 shrink-0 overflow-hidden rounded-2xl border border-slate-100 dark:border-white/5">
+          <div className="w-full">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+            >
+              <div className="relative aspect-video md:aspect-square md:w-52 shrink-0 overflow-hidden rounded-2xl border border-slate-100 dark:border-white/5">
             <Image
               // Aquí usamos urlFor para convertir el objeto de Sanity en URL
               src={entry.image ? urlFor(entry.image).url() : "/placeholder.svg"}
@@ -69,7 +74,9 @@ export default function BlogListClient({ entries }: { entries: BlogPost[] }) {
             </div>
           </div>
           <div className="absolute -inset-x-full top-0 h-full w-1/2 bg-gradient-to-r from-transparent via-blue-400/10 to-transparent skew-x-12 transition-all duration-1000 group-hover:translate-x-[300%]" />
-        </motion.article>
+            </motion.div>
+          </div>
+        </article>
       ))}
     </div>
   )

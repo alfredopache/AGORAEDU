@@ -1,8 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion as motionBase, AnimatePresence } from "framer-motion"
 import { CheckCircle2, XCircle, Trophy, Clock, TrendingUp, Award, BookOpen, ChevronRight } from "lucide-react"
+
+const motion = motionBase as any
 import { cn } from "@/lib/utils"
 
 interface ExamQuestion {

@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { MessageSquare, GraduationCap, Menu, X } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion as motionBase, AnimatePresence } from "framer-motion"
+
+const motion = motionBase as any
 import { cn } from "@/lib/utils"
 import { ChatMode } from "./chat-mode"
 import { ExamMode } from "./exam-mode"
@@ -124,7 +126,7 @@ export function EduIAMainLayout() {
         </AnimatePresence>
 
         {/* Main Content Area */}
-        <main className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {/* Header con modo selector */}
           <div className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-4">
             <div className="flex items-center justify-between max-w-7xl mx-auto">

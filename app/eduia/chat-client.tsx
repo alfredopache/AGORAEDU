@@ -2,8 +2,10 @@
 
 import { useState, useRef, useEffect } from "react"
 import { Send, Loader2, Bot, User, Trash2, Sparkles } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion as motionBase, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
+
+const motion = motionBase as any
 
 interface Message {
   role: "user" | "assistant"
@@ -165,20 +167,22 @@ export function EduIAChatClient() {
         ) : (
           <AnimatePresence>
             {messages.map((message, index) => (
-              <motion.div
+              <div
                 key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
                 className={cn(
                   "flex gap-3",
                   message.role === "user" ? "justify-end" : "justify-start"
                 )}
               >
-                {message.role === "assistant" && (
-                  <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-2 rounded-xl h-fit">
-                    <Bot className="w-5 h-5 text-white" />
-                  </div>
-                )}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  {message.role === "assistant" && (
+                    <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-2 rounded-xl h-fit">
+                      <Bot className="w-5 h-5 text-white" />
+                    </div>
+                  )}
                 <div
                   className={cn(
                     "max-w-[80%] rounded-2xl p-4 shadow-md",
@@ -208,28 +212,30 @@ export function EduIAChatClient() {
                   </div>
                 )}
               </motion.div>
+            </div>
             ))}
           </AnimatePresence>
         )}
 
         {isLoading && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex gap-3"
-          >
-            <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-2 rounded-xl h-fit">
-              <Bot className="w-5 h-5 text-white" />
-            </div>
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-md border border-slate-200 dark:border-slate-700">
-              <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
-                <span className="text-sm text-slate-600 dark:text-slate-400">
-                  Pensando...
-                </span>
+          <div className="flex gap-3">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-2 rounded-xl h-fit">
+                <Bot className="w-5 h-5 text-white" />
               </div>
-            </div>
-          </motion.div>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-md border border-slate-200 dark:border-slate-700">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                  <span className="text-sm text-slate-600 dark:text-slate-400">
+                    Pensando...
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
 
         <div ref={messagesEndRef} />

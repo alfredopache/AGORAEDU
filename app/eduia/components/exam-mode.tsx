@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { 
+import { motion as motionBase, AnimatePresence } from "framer-motion"
+import {
   Clock, 
   CheckCircle2, 
   XCircle, 
@@ -18,6 +18,8 @@ import {
   Lightbulb
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+const motion = motionBase as any
 
 interface ExamQuestion {
   _id: string
@@ -52,16 +54,8 @@ interface ExamModeProps {
 type ExamState = "setup" | "taking" | "results"
 
 const SUBJECT_OPTIONS = [
-  { value: "matematicas", label: "Matemáticas", emoji: "🔢", color: "from-pink-500 to-red-500" },
-  { value: "lengua", label: "Lengua Castellana", emoji: "📝", color: "from-purple-500 to-indigo-500" },
-  { value: "lengua:comentario", label: "Lengua — Comentario de texto", emoji: "📄", color: "from-violet-500 to-indigo-500" },
-  { value: "ingles", label: "Inglés", emoji: "🌍", color: "from-blue-500 to-cyan-500" },
-  { value: "sociales", label: "Ciencias Sociales", emoji: "🌐", color: "from-green-500 to-emerald-500" },
-  { value: "sociales:historia", label: "Sociales — Historia", emoji: "🏛️", color: "from-emerald-500 to-green-500" },
-  { value: "tic", label: "TIC", emoji: "💻", color: "from-sky-500 to-cyan-500" },
-  { value: "ambito_linguistico", label: "Ámbito lingüístico-comunicativo", emoji: "🗣️", color: "from-indigo-500 to-purple-500" },
+  { value: "ambito_linguistico", label: "Ámbito lingüístico-social", emoji: "🗣️", color: "from-indigo-500 to-purple-500" },
   { value: "ambito_cientifico", label: "Ámbito científico-matemático", emoji: "🔬", color: "from-green-600 to-emerald-500" },
-  { value: "mixto", label: "Examen Completo (Todas)", emoji: "🎯", color: "from-orange-500 to-yellow-500" },
 ]
 
 const DIFFICULTY_OPTIONS = [
@@ -248,7 +242,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
             {/* Selección de Materia */}
             <div className="mb-8">
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-                📚 Selecciona la materia:
+                📚 Selecciona el ámbito:
               </label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {SUBJECT_OPTIONS.map((subject) => (
