@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { AdminLink } from "./admin-link"
 import Magnetic from "./magnetic"
 import { cn } from "@/lib/utils"
+import GoogleSignIn from "@/components/google-signin"
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -140,6 +141,9 @@ export function BlogNav({ latestProject }: { latestProject?: LatestProject | nul
           <div className="hidden md:block">
             <AdminLink />
           </div>
+          <div className="hidden md:block">
+            <GoogleSignIn />
+          </div>
           <div className={cn(
             "hidden md:flex p-1 rounded-full border transition-all",
             scrolled 
@@ -196,7 +200,10 @@ export function BlogNav({ latestProject }: { latestProject?: LatestProject | nul
                     </li>
                   ))}
                 </ul>
-                <AdminLink />
+                  <AdminLink />
+                  <div className="pt-2">
+                    <GoogleSignIn />
+                  </div>
               </div>
             </motion.div>
           )}

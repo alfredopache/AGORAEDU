@@ -2,6 +2,7 @@ import React from "react"
 import type { Metadata } from 'next'
 import { Space_Grotesk, Inter } from 'next/font/google'
 import { ThemeProvider } from "@/components/theme-provider"
+import AuthSessionProvider from "@/components/session-provider"
 import { LayoutContent } from "@/components/layout-content"
 import { getLatestProject } from "@/content/projects" 
 import { Toaster } from "sonner" // Añadimos el Toaster para las sugerencias
@@ -71,7 +72,9 @@ export default async function RootLayout({
           disableTransitionOnChange={false} // Cambiado a FALSE para permitir la animación de cambio
         >
           <LayoutContent latestProject={latestProject}>
-            {children}
+            <AuthSessionProvider>
+              {children}
+            </AuthSessionProvider>
           </LayoutContent>
           <Toaster position="bottom-right" richColors closeButton />
         </ThemeProvider>
