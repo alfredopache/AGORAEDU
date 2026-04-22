@@ -31,29 +31,75 @@ export async function POST(request: NextRequest) {
       score
     )
 
+    // Preparar preguntas: intentar crear en Sanity las preguntas con 'snapshot'
+    const preparedQuestions: any[] = []
+    if (Array.isArray(questions)) {
+      for (const q of questions) {
+        const base = {
+          _type: 'object',
+          userAnswer: q.userAnswer,
+          isCorrect: q.isCorrect,
+          timeSpent: q.timeSpent,
+        }
+
+        if (q?.snapshot && q?.questionId) {
+          const doc = {
+            _id: q.questionId,
+            _type: 'examQuestion',
+            question: q.snapshot.question || q.snapshot.questionText || 'Pregunta generada',
+            subject: q.snapshot.subject || 'mixto',
+            topic: q.snapshot.topic,
+            difficulty: q.snapshot.difficulty || 'basico',
+            options: q.snapshot.options || [],
+            explanation: q.snapshot.explanation || '',
+            source: q.snapshot.source || { name: 'Generado', year: new Date().getFullYear(), region: 'Auto' },
+            isActive: true,
+          }
+
+          try {
+            // Intentar crear la pregunta solo si no existe
+            // @ts-ignore
+            await writeClient.createIfNotExists(doc)
+            preparedQuestions.push({
+              ...base,
+              questionRef: { _type: 'reference', _ref: q.questionId },
+            })
+            continue
+          } catch (err) {
+            console.warn('No se pudo crear pregunta de respaldo:', err)
+            // En caso de error, caeremos al fallback que guarda snapshot inline
+          }
+        }
+
+        // Si no hay snapshot o la creación falló, guardar snapshot inline si existe, o referencia si no
+        if (q?.snapshot) {
+          preparedQuestions.push({
+            ...base,
+            questionSnapshot: q.snapshot,
+          })
+        } else {
+          preparedQuestions.push({
+            ...base,
+            questionRef: { _type: 'reference', _ref: q.questionId },
+          })
+        }
+      }
+    }
+
     // Guardar el intento en Sanity (usar cliente de escritura con token)
     const examAttempt = await writeClient.create({
-      _type: "examAttempt",
+      _type: 'examAttempt',
       sessionId,
       subject,
       difficulty,
-      questions: questions.map((q) => ({
-        _type: "object",
-        questionRef: {
-          _type: "reference",
-          _ref: q.questionId,
-        },
-        userAnswer: q.userAnswer,
-        isCorrect: q.isCorrect,
-        timeSpent: q.timeSpent,
-      })),
+      questions: preparedQuestions,
       score,
       totalQuestions,
       correctAnswers,
       totalTime,
       completedAt: new Date().toISOString(),
       analysis: {
-        _type: "object",
+        _type: 'object',
         strengths: analysis.strengths,
         weaknesses: analysis.weaknesses,
         recommendations: analysis.recommendations,

@@ -244,7 +244,7 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
                         whileHover={selectedOption === null ? { scale: 1.02 } : {}}
                         whileTap={selectedOption === null ? { scale: 0.98 } : {}}
                         className={cn(
-                          "w-full text-left p-5 rounded-xl border-2 transition-all duration-300 flex items-center gap-4",
+                          "w-full text-left p-5 rounded-xl border-2 transition-all duration-300 flex items-center gap-4 pointer-events-auto",
                           selectedOption === null && "hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer",
                           !showResult && "bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600",
                           showResult && isSelected && isCorrect && "bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-400",

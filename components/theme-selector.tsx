@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
 export function ThemeSelector({ className }: { className?: string }) {

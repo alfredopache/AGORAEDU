@@ -384,7 +384,7 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
                       key={scope.value}
                       onClick={() => setSelectedScope(scope.value)}
                       className={cn(
-                        "rounded-2xl p-4 text-left border transition-all",
+                        "rounded-2xl p-4 text-left border transition-all pointer-events-auto",
                         selectedScope === scope.value
                           ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-lg"
                           : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-purple-300 dark:hover:border-purple-600"

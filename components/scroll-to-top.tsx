@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState } from "react"
 import { ChevronUp } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence } from "@/lib/motion"
 
 export function ScrollToTop() {
   const [isVisible, setIsVisible] = useState(false)

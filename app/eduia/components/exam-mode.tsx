@@ -54,8 +54,14 @@ interface ExamModeProps {
 type ExamState = "setup" | "taking" | "results"
 
 const SUBJECT_OPTIONS = [
-  { value: "ambito_linguistico", label: "Ámbito lingüístico-social", emoji: "🗣️", color: "from-indigo-500 to-purple-500" },
-  { value: "ambito_cientifico", label: "Ámbito científico-matemático", emoji: "🔬", color: "from-green-600 to-emerald-500" },
+  { value: "mixto", label: "Mixto (todas)", emoji: "🧠", color: "from-indigo-500 to-purple-500" },
+  { value: "matematicas", label: "Matemáticas", emoji: "🔢", color: "from-blue-600 to-indigo-600" },
+  { value: "lengua", label: "Lengua y Comunicación", emoji: "📝", color: "from-indigo-500 to-purple-500" },
+  { value: "lengua:comentario", label: "Comentario de texto", emoji: "📚", color: "from-pink-500 to-pink-600" },
+  { value: "ingles", label: "Inglés", emoji: "🌍", color: "from-emerald-500 to-green-600" },
+  { value: "sociales", label: "Ciencias Sociales", emoji: "🏛️", color: "from-yellow-500 to-orange-500" },
+  { value: "sociales:historia", label: "Historia", emoji: "🏺", color: "from-yellow-600 to-orange-600" },
+  { value: "tic", label: "TIC", emoji: "💻", color: "from-green-400 to-teal-500" },
 ]
 
 const DIFFICULTY_OPTIONS = [
@@ -181,6 +187,16 @@ export function ExamMode({ sessionId }: ExamModeProps) {
             userAnswer: answers[idx]?.selectedOption,
             isCorrect: answers[idx]?.isCorrect,
             timeSpent: answers[idx]?.timeSpent,
+            // enviar snapshot para que el servidor pueda persistir la pregunta si es generada
+            snapshot: {
+              question: q.question,
+              subject: q.subject,
+              topic: q.topic,
+              difficulty: q.difficulty,
+              options: q.options,
+              explanation: q.explanation,
+              source: q.source,
+            },
           })),
           score: scorePercentage,
           totalQuestions: questions.length,
@@ -244,13 +260,13 @@ export function ExamMode({ sessionId }: ExamModeProps) {
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
                 📚 Selecciona el ámbito:
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 {SUBJECT_OPTIONS.map((subject) => (
                   <button
                     key={subject.value}
                     onClick={() => setSelectedSubject(subject.value)}
                     className={cn(
-                      "p-4 rounded-xl border-2 transition-all text-left group",
+                      "p-4 rounded-xl border-2 transition-all text-left group pointer-events-auto",
                       selectedSubject === subject.value
                         ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-lg scale-105"
                         : "border-slate-200 dark:border-slate-700 hover:border-purple-300 dark:hover:border-purple-600"
@@ -281,7 +297,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
                     key={difficulty.value}
                     onClick={() => setSelectedDifficulty(difficulty.value)}
                     className={cn(
-                      "p-4 rounded-xl border-2 transition-all",
+                      "p-4 rounded-xl border-2 transition-all pointer-events-auto",
                       selectedDifficulty === difficulty.value
                         ? "border-pink-500 bg-pink-50 dark:bg-pink-900/20 shadow-lg scale-105"
                         : "border-slate-200 dark:border-slate-700 hover:border-pink-300 dark:hover:border-pink-600"
@@ -305,16 +321,26 @@ export function ExamMode({ sessionId }: ExamModeProps) {
               <div className="flex items-center gap-4">
                 <input
                   type="range"
-                  min="5"
+                  min="1"
                   max="30"
-                  step="5"
+                  step="1"
                   value={questionCount}
                   onChange={(e) => setQuestionCount(Number(e.target.value))}
-                  className="flex-1"
+                  className="flex-1 pointer-events-auto"
                 />
-                <span className="text-2xl font-bold text-purple-600 dark:text-purple-400 min-w-[60px] text-center">
-                  {questionCount}
-                </span>
+                <input
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={questionCount}
+                  onChange={(e) => {
+                    const v = Number(e.target.value)
+                    if (!isNaN(v)) setQuestionCount(Math.max(1, Math.min(30, Math.floor(v))))
+                  }}
+                  className="w-20 text-center rounded-md border px-2 py-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  aria-label="Número de preguntas"
+                />
+                <span className="text-sm text-slate-500 dark:text-slate-400">preguntas</span>
               </div>
             </div>
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { client } from "@/lib/sanity"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence } from "@/lib/motion"
 
 export function AdminLink() {
   const [isLogged, setIsLogged] = useState(false)

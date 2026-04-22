@@ -1,5 +1,5 @@
 import { SearchX } from "lucide-react"
-import { motion } from "framer-motion"
+import { motion } from "@/lib/motion"
 
 export function EmptyState({ title = "No se encontraron resultados", subtitle = "Intenta ajustar tus filtros o buscar otra categoría." }) {
   return (

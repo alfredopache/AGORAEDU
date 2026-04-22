@@ -1,6 +1,6 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { motion } from "@/lib/motion"
 import * as Icons from "lucide-react"
 import { useMemo, useEffect, useState } from "react"
 

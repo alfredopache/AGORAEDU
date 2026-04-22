@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { motion } from "framer-motion"
+import { motion } from "@/lib/motion"
 import { ArrowRight, Calendar } from "lucide-react"
 import { Project } from "@/content/projects"
 import { DynamicIcon } from "./dynamic-icon"
