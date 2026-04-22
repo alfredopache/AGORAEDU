@@ -21,6 +21,12 @@ export default defineType({
       validation: (Rule) => Rule.required(),
     }),
     defineField({
+      name: 'userEmail',
+      title: 'Email del usuario (propietario)',
+      type: 'string',
+      description: 'Correo del usuario autenticado que creó/posee la conversación (si aplica)',
+    }),
+    defineField({
       name: 'messages',
       title: 'Mensajes',
       type: 'array',
