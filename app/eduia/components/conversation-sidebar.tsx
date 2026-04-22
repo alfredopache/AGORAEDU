@@ -13,6 +13,8 @@ interface ConversationSidebarProps {
   onSelectConversation: (id: string) => void
   onNewChat: () => void
   onRefresh: () => void
+  onDeleteConversation?: (id: string) => void
+  sessionId?: string
 }
 
 const SUBJECT_COLORS = {
@@ -37,6 +39,8 @@ export function ConversationSidebar({
   onSelectConversation,
   onNewChat,
   onRefresh,
+  onDeleteConversation,
+  sessionId,
 }: ConversationSidebarProps) {
   return (
     <div className="flex flex-col h-full">
@@ -100,6 +104,20 @@ export function ConversationSidebar({
                     </span>
                   </div>
                 </div>
+
+                {/* Delete button */}
+                {onDeleteConversation && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDeleteConversation(conversation._id)
+                    }}
+                    title="Borrar conversación"
+                    className="ml-2 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
+                  >
+                    <Trash2 className="w-4 h-4 text-rose-600" />
+                  </button>
+                )}
               </div>
             </motion.button>
           ))

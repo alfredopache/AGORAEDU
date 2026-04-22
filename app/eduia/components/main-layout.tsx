@@ -73,6 +73,25 @@ export function EduIAMainLayout() {
     loadConversations()
   }
 
+  const handleDeleteConversation = async (conversationId: string) => {
+    const ok = confirm('¿Seguro que quieres borrar esta conversación?')
+    if (!ok) return
+    try {
+      const response = await fetch(`/api/conversations?id=${conversationId}&sessionId=${sessionId}`, {
+        method: 'DELETE',
+      })
+      if (response.ok) {
+        loadConversations()
+      } else {
+        const data = await response.json()
+        alert(data?.error || 'Error borrando conversación')
+      }
+    } catch (err) {
+      console.error('Error borrando conversación:', err)
+      alert('Error borrando conversación')
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-slate-950 dark:via-purple-950/20 dark:to-slate-950 pt-20">
       <div className="h-full flex">
@@ -81,9 +100,11 @@ export function EduIAMainLayout() {
           <ConversationSidebar
             conversations={conversations}
             currentConversationId={currentConversationId}
+            sessionId={sessionId}
             onSelectConversation={handleSelectConversation}
             onNewChat={handleNewChat}
             onRefresh={loadConversations}
+            onDeleteConversation={handleDeleteConversation}
           />
         </aside>
 
@@ -116,9 +137,11 @@ export function EduIAMainLayout() {
                 <ConversationSidebar
                   conversations={conversations}
                   currentConversationId={currentConversationId}
+                  sessionId={sessionId}
                   onSelectConversation={handleSelectConversation}
                   onNewChat={handleNewChat}
                   onRefresh={loadConversations}
+                  onDeleteConversation={handleDeleteConversation}
                 />
               </motion.aside>
             </>
