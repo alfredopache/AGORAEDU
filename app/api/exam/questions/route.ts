@@ -35,49 +35,115 @@ export async function GET(request: NextRequest) {
       return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
     }
 
+    // --- Utilidades para evitar opciones repetidas y añadir variedad ---
+    function shuffle<T>(arr: T[]) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        const tmp = arr[i]
+        arr[i] = arr[j]
+        arr[j] = tmp
+      }
+      return arr
+    }
+
+    function ensureUniqueOptions(opts: Array<{ text: string; isCorrect: boolean }>, desired = 4) {
+      const map = new Map<string, { text: string; isCorrect: boolean }>()
+      opts.forEach(o => map.set(o.text, { text: o.text, isCorrect: o.isCorrect }))
+      let attempts = 0
+      while (map.size < desired && attempts < 20) {
+        const candidate = `Opción ${Math.random().toString(36).slice(2, 6)}`
+        if (!map.has(candidate)) map.set(candidate, { text: candidate, isCorrect: false })
+        attempts++
+      }
+      const arr = Array.from(map.values()).slice(0, desired)
+      if (!arr.some(a => a.isCorrect)) {
+        arr[0].isCorrect = true
+      } else if (arr.filter(a => a.isCorrect).length > 1) {
+        let found = false
+        arr.forEach((a) => {
+          if (a.isCorrect) {
+            if (!found) found = true
+            else a.isCorrect = false
+          }
+        })
+      }
+      return shuffle(arr)
+    }
+
+    // Nueva versión del generador de preguntas de respaldo con mayor variedad
     function generateFallbackQuestion(subjectName: string, difficultyLevel: string, topic?: string) {
-      // Generar una pregunta simple según subject y difficulty
       const uid = makeId(subjectName)
       const baseTopic = topic || (subjectName === 'matematicas' ? 'Álgebra' : subjectName === 'lengua' ? 'Ortografía' : 'General')
       let questionText = ''
-      const options: Array<any> = []
+      let rawOptions: Array<{ text: string; isCorrect: boolean }> = []
 
       if (subjectName === 'matematicas') {
         const a = randomInt(1, 12)
         const b = randomInt(1, 12)
         questionText = `¿Cuál es el resultado de ${a} × ${b}?`
         const correct = a * b
-        const wrong1 = correct + randomInt(1, 6)
-        const wrong2 = Math.max(1, correct - randomInt(1, 6))
-        const wrong3 = correct + randomInt(7, 12)
-        const vals = [correct, wrong1, wrong2, wrong3].sort(() => Math.random() - 0.5)
-        vals.forEach((v) => options.push({ text: String(v), isCorrect: v === correct }))
+        const wrong = new Set<number>()
+        while (wrong.size < 3) {
+          const candidate = correct + (Math.random() < 0.5 ? -randomInt(1, 6) : randomInt(1, 12))
+          if (candidate > 0 && candidate !== correct) wrong.add(candidate)
+        }
+        rawOptions = [{ text: String(correct), isCorrect: true }, ...Array.from(wrong).map(n => ({ text: String(n), isCorrect: false }))]
       } else if (subjectName === 'ingles') {
-        questionText = `Choose the correct translation for: 'hola'` // simple placeholder
-        const vals = ["hello", "bye", "please", "thanks"].sort(() => Math.random() - 0.5)
-        vals.forEach((v) => options.push({ text: v, isCorrect: v === "hello" }))
+        const pool: Array<[string, string]> = [
+          ['hola', 'hello'], ['adiós', 'goodbye'], ['gracias', 'thanks'], ['por favor', 'please'], ['buenos días', 'good morning'], ['noche', 'night']
+        ]
+        const pick = pool[Math.floor(Math.random() * pool.length)]
+        questionText = `Choose the correct translation for: '${pick[0]}'`
+        const englishDistractors = ['hello', 'goodbye', 'please', 'thanks', 'good morning', 'night'].filter(w => w !== pick[1])
+        shuffle(englishDistractors)
+        rawOptions = [{ text: pick[1], isCorrect: true }, ...englishDistractors.slice(0, 3).map(t => ({ text: t, isCorrect: false }))]
       } else if (subjectName === 'lengua') {
-        questionText = `Selecciona la opción con la palabra correctamente acentuada: 'arbol, camión, lapiz, facil'`
-        const vals = ["árbol", "camión", "lápiz", "fácil"].sort(() => Math.random() - 0.5)
-        vals.forEach((v) => options.push({ text: v, isCorrect: v === "camión" || v === "árbol" || v === "lápiz" || v === "fácil" }))
-        // mark only one as correct (pick one)
-        const correctIdx = randomInt(0, options.length - 1)
-        options.forEach((o, i) => (o.isCorrect = i === correctIdx))
+        const pool = [
+          { base: ['arbol', 'árbol'] },
+          { base: ['lapiz', 'lápiz'] },
+          { base: ['facil', 'fácil'] },
+          { base: ['cafe', 'café'] },
+          { base: ['camion', 'camión'] }
+        ]
+        const pick = pool[Math.floor(Math.random() * pool.length)]
+        questionText = `Selecciona la opción con la palabra correctamente acentuada: '${pool.map(p => p.base[0]).slice(0,4).join(', ')}'`
+        const correct = pick.base[1]
+        const distractors = pool.map(p => p.base[1]).filter(w => w !== correct)
+        shuffle(distractors)
+        rawOptions = [{ text: correct, isCorrect: true }, ...distractors.slice(0, 3).map(t => ({ text: t, isCorrect: false }))]
       } else if (subjectName === 'sociales') {
-        questionText = `¿En qué continente se encuentra España?`
-        const vals = ["Europa", "Asia", "África", "América"].sort(() => Math.random() - 0.5)
-        vals.forEach((v) => options.push({ text: v, isCorrect: v === "Europa" }))
+        const countries = [
+          ['España', 'Europa'], ['Brasil', 'América'], ['Japón', 'Asia'], ['Egipto', 'África'], ['Australia', 'Oceanía']
+        ]
+        const pick = countries[Math.floor(Math.random() * countries.length)]
+        questionText = `¿En qué continente se encuentra ${pick[0]}?`
+        const continents = ['Europa', 'Asia', 'África', 'América', 'Oceanía']
+        const wrong = continents.filter(c => c !== pick[1])
+        shuffle(wrong)
+        rawOptions = [{ text: pick[1], isCorrect: true }, ...wrong.slice(0, 3).map(w => ({ text: w, isCorrect: false }))]
       } else if (subjectName === 'tic') {
-        questionText = `¿Qué significa 'HTML'?`
-        const vals = ["HyperText Markup Language", "HighText Machine Language", "Hyperlinks and Text Markup Language", "Home Tool Markup Language"].sort(() => Math.random() - 0.5)
-        vals.forEach((v) => options.push({ text: v, isCorrect: v === "HyperText Markup Language" }))
+        const pairs = [
+          ['HTML', 'HyperText Markup Language'],
+          ['CSS', 'Cascading Style Sheets'],
+          ['JSON', 'JavaScript Object Notation'],
+          ['API', 'Application Programming Interface']
+        ]
+        const pick = pairs[Math.floor(Math.random() * pairs.length)]
+        questionText = `¿Qué significa '${pick[0]}'?`
+        const wrong = pairs.map(p => p[1]).filter(p => p !== pick[1])
+        shuffle(wrong)
+        rawOptions = [{ text: pick[1], isCorrect: true }, ...wrong.slice(0, 3).map(t => ({ text: t, isCorrect: false }))]
       } else {
-        // gen genérica
         questionText = `Pregunta de ${subjectName} (generada aleatoriamente)`
-        const vals = ["Opción A", "Opción B", "Opción C", "Opción D"].sort(() => Math.random() - 0.5)
-        const correctIdx = randomInt(0, 3)
-        vals.forEach((v, i) => options.push({ text: v, isCorrect: i === correctIdx }))
+        rawOptions = [
+          { text: 'Opción A', isCorrect: Math.random() < 0.5 },
+          { text: 'Opción B', isCorrect: false },
+          { text: 'Opción C', isCorrect: false },
+          { text: 'Opción D', isCorrect: false }
+        ]
       }
+
+      const options = ensureUniqueOptions(rawOptions, 4)
 
       return {
         _id: uid,
