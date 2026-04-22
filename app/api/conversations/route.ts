@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { client } from "@/sanity/lib/client"
+import { client, writeClient } from "@/sanity/lib/client"
 
 // GET - Obtener conversaciones del usuario
 export async function GET(request: NextRequest) {
@@ -65,8 +65,8 @@ export async function POST(request: NextRequest) {
     let result
 
     if (conversationId) {
-      // Actualizar conversación existente
-      result = await client
+      // Actualizar conversación existente (usar writeClient)
+      result = await writeClient
         .patch(conversationId)
         .set({
           messages: conversationData.messages,
@@ -74,8 +74,8 @@ export async function POST(request: NextRequest) {
         })
         .commit()
     } else {
-      // Crear nueva conversación
-      result = await client.create({
+      // Crear nueva conversación (usar writeClient)
+      result = await writeClient.create({
         ...conversationData,
         createdAt: new Date().toISOString(),
       })
@@ -107,7 +107,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    await client.delete(conversationId)
+    await writeClient.delete(conversationId)
 
     return NextResponse.json({ success: true })
   } catch (error) {

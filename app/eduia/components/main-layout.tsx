@@ -126,7 +126,7 @@ export function EduIAMainLayout() {
         </AnimatePresence>
 
         {/* Main Content Area */}
-        <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <main className="flex-1 min-h-0 flex flex-col overflow-auto">
           {/* Header con modo selector */}
           <div className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-4">
             <div className="flex items-center justify-between max-w-7xl mx-auto">
@@ -179,7 +179,7 @@ export function EduIAMainLayout() {
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-auto">
             <AnimatePresence mode="wait">
               {mode === "chat" ? (
                 <ChatMode

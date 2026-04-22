@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { client } from "@/sanity/lib/client"
+import { writeClient } from "@/sanity/lib/client"
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
       score
     )
 
-    // Guardar el intento en Sanity
-    const examAttempt = await client.create({
+    // Guardar el intento en Sanity (usar cliente de escritura con token)
+    const examAttempt = await writeClient.create({
       _type: "examAttempt",
       sessionId,
       subject,
