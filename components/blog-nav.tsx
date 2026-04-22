@@ -49,11 +49,11 @@ export function BlogNav({ latestProject }: { latestProject?: LatestProject | nul
         )}
       >
         {/* LADO IZQUIERDO: Logo y Latest */}
-        <div className="flex items-center gap-6"> 
+        <div className="flex items-center gap-6 mr-4 md:mr-6 lg:mr-8"> 
           <Magnetic>
-            <Link 
-              href="/" 
-              className="flex items-center font-serif text-2xl font-bold tracking-tighter shrink-0 block transition-colors duration-300 text-black dark:text-white"
+            <Link
+              href="/"
+              className="relative z-20 flex items-center font-serif text-2xl font-bold tracking-tighter shrink-0 block transition-colors duration-300 text-black dark:text-white"
             >
               <Image
                 src="/images/logo.png"
@@ -66,32 +66,7 @@ export function BlogNav({ latestProject }: { latestProject?: LatestProject | nul
             </Link>
           </Magnetic>
 
-          {latestProject && (
-            <div className="hidden lg:block">
-              <Magnetic>
-                <Link
-                  href={`/proyectos/${latestProject.slug}`}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all group backdrop-blur-md",
-                    scrolled 
-                      ? "bg-blue-100/50 border-blue-200 text-black dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-white" 
-                      : "bg-black/5 border-black/10 text-black dark:bg-white/10 dark:border-white/20 dark:text-white"
-                  )}
-                >
-                  <div className="relative flex h-2 w-2">
-                    <span className={cn("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", scrolled ? "bg-blue-400" : "bg-blue-500")}></span>
-                    <span className={cn("relative inline-flex rounded-full h-2 w-2", scrolled ? "bg-blue-500" : "bg-blue-600")}></span>
-                  </div>
-                  <span className={cn("text-[9px] font-black uppercase tracking-[0.2em]", scrolled ? "text-blue-700 dark:text-blue-400" : "text-black/70 dark:text-white")}>
-                    Reciente
-                  </span>
-                  <span className={cn("text-[11px] font-bold truncate max-w-[120px] transition-colors text-black dark:text-white/90 group-hover:text-blue-600")}>
-                    {latestProject.title}
-                  </span>
-                </Link>
-              </Magnetic>
-            </div>
-          )}
+          {/* Badge de 'latestProject' eliminado intencionalmente */}
         </div>
 
         {/* CENTRO: Enlaces de navegación */}
