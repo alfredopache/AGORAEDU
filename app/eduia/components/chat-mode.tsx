@@ -312,9 +312,20 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
     setExamMode('results')
     
     // Agregar resumen al chat
+    // Calcular correctas solamente entre preguntas autocorregibles
+    let correctCount = 0
+    let gradedCount = 0
+    results.questions.forEach((q: any, idx: number) => {
+      const ans = results.userAnswers[idx]
+      if (q.options && q.options.length > 0) {
+        gradedCount++
+        if (typeof ans === 'number' && q.options[ans]?.isCorrect) correctCount++
+      }
+    })
+
     const summaryMessage: Message = {
       role: "assistant",
-      content: `✅ **Examen completado!**\n\n**Puntuación:** ${results.score}% (${results.score >= 50 ? 'Aprobado' : 'No aprobado'})\n**Nota de Media:** ${((results.score / 100) * 10).toFixed(2)} / 10\n\nHas respondido correctamente ${results.userAnswers.filter((ans: number, idx: number) => results.questions[idx].options[ans]?.isCorrect).length} de ${results.questions.length} preguntas.\n\n¿Quieres repasar algún concepto específico?`,
+      content: `✅ **Examen completado!**\n\n**Puntuación:** ${results.score}% (${results.score >= 50 ? 'Aprobado' : 'No aprobado'})\n**Nota de Media:** ${((results.score / 100) * 10).toFixed(2)} / 10\n\nHas respondido correctamente ${correctCount} de ${gradedCount} preguntas autocorregibles (y ${results.questions.length - gradedCount} preguntas abiertas pendientes de corrección).\n\n¿Quieres repasar algún concepto específico?`,
       timestamp: new Date(),
     }
     

@@ -13,10 +13,10 @@ interface ExamQuestion {
   subject: string
   topic: string
   difficulty: "basico" | "intermedio" | "avanzado"
-  options: Array<{
-    text: string
-    isCorrect: boolean
-  }>
+    options?: Array<{
+      text: string
+      isCorrect: boolean
+    }>
   explanation: string
   source: {
     name: string
@@ -50,6 +50,7 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
   const [userAnswers, setUserAnswers] = useState<number[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
+    const [openAnswer, setOpenAnswer] = useState<string>("")
   const [startTime] = useState(Date.now())
   const [questionStartTime, setQuestionStartTime] = useState(Date.now())
   const [showingResults, setShowingResults] = useState(false)
@@ -86,6 +87,25 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
     const newAnswers = [...userAnswers, optionIndex]
     setUserAnswers(newAnswers)
 
+  const handleOpenSubmit = (text: string) => {
+    if (selectedOption !== null) return
+    // Guardar la respuesta abierta como texto
+    setSelectedOption(0)
+    const newAnswers = [...userAnswers, text]
+    setUserAnswers(newAnswers)
+
+    setTimeout(() => {
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1)
+        setSelectedOption(null)
+        setOpenAnswer("")
+        setQuestionStartTime(Date.now())
+      } else {
+        finishExam(newAnswers)
+      }
+    }, 1000)
+  }
+
     // Esperar 1 segundo antes de avanzar
     setTimeout(() => {
       if (currentQuestionIndex < questions.length - 1) {
@@ -103,14 +123,20 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
     const totalTime = Date.now() - startTime
     let correctCount = 0
 
+    let correctCount = 0
+    let gradedCount = 0
+
     questions.forEach((q, index) => {
       const userAnswer = answers[index]
-      if (q.options[userAnswer]?.isCorrect) {
-        correctCount++
+      if (q.options && q.options.length > 0) {
+        gradedCount++
+        if (typeof userAnswer === 'number' && q.options[userAnswer]?.isCorrect) {
+          correctCount++
+        }
       }
     })
 
-    const score = Math.round((correctCount / questions.length) * 100)
+    const score = gradedCount > 0 ? Math.round((correctCount / gradedCount) * 100) : 0
 
     onComplete({
       questions,
@@ -231,7 +257,27 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
 
                 {/* Opciones */}
                 <div className="space-y-3">
-                  {currentQuestion.options.map((option, index) => {
+                  {(!currentQuestion.options || currentQuestion.options.length === 0) ? (
+                    // Pregunta abierta: mostrar textarea y botón
+                    <div className="space-y-3">
+                      <textarea
+                        value={openAnswer}
+                        onChange={(e) => setOpenAnswer(e.target.value)}
+                        placeholder="Escribe tu respuesta aquí..."
+                        className="w-full min-h-[120px] p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                      />
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => handleOpenSubmit(openAnswer)}
+                          disabled={!openAnswer.trim()}
+                          className="px-6 py-2 rounded-lg bg-purple-600 text-white disabled:opacity-50"
+                        >
+                          Enviar respuesta
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    currentQuestion.options.map((option, index) => {
                     const isSelected = selectedOption === index
                     const isCorrect = option.isCorrect
                     const showResult = selectedOption !== null
@@ -286,6 +332,7 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
                       </motion.button>
                     )
                   })}
+                  )}
                 </div>
 
                 {/* Fuente */}
@@ -329,12 +376,22 @@ interface ExamResultsViewProps {
 }
 
 export function ExamResultsView({ results, onNewExam, onBackToChat }: ExamResultsViewProps) {
-  const correctCount = results.userAnswers.filter((answer, index) => 
-    results.questions[index].options[answer]?.isCorrect
-  ).length
-  
-  const incorrectCount = results.questions.length - correctCount
-  const averageTime = Math.round(results.timeSpent / results.questions.length / 1000)
+  let correctCount = 0
+  let gradedCount = 0
+  let openCount = 0
+
+  results.questions.forEach((q, index) => {
+    const ans = results.userAnswers[index]
+    if (q.options && q.options.length > 0) {
+      gradedCount++
+      if (typeof ans === 'number' && q.options[ans]?.isCorrect) correctCount++
+    } else {
+      openCount++
+    }
+  })
+
+  const incorrectCount = gradedCount - correctCount
+  const averageTime = Math.round(results.timeSpent / Math.max(results.questions.length, 1) / 1000)
   const score = results.score
 
   // Calcular nota de media
@@ -348,7 +405,8 @@ export function ExamResultsView({ results, onNewExam, onBackToChat }: ExamResult
       subjectStats[q.subject] = { correct: 0, total: 0, subject: q.subject }
     }
     subjectStats[q.subject].total++
-    if (q.options[results.userAnswers[index]]?.isCorrect) {
+    const ans = results.userAnswers[index]
+    if (q.options && typeof ans === 'number' && q.options[ans]?.isCorrect) {
       subjectStats[q.subject].correct++
     }
   })

@@ -9,7 +9,8 @@
     "lint": "eslint",
     "seed": "tsx scripts/seed-data.ts",
     "seed:exam": "tsx scripts/seed-exam-questions.ts",
-    "seed:jorge": "tsx scripts/seed-jorge.ts"
+    "seed:jorge": "tsx scripts/seed-jorge.ts",
+    "import:questions": "tsx scripts/import-questions.ts"
   },
   "dependencies": {
     "@babel/runtime": "^7.29.2",

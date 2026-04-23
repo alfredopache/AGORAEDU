@@ -80,7 +80,9 @@ export default defineType({
           },
         },
       ],
-      validation: (Rule) => Rule.required().min(2).max(5),
+      // Las opciones pueden estar ausentes para preguntas abiertas; no forzamos mínimo.
+      // Si existen, preferimos entre 2 y 5, pero lo dejamos sin validación estricta
+      // para facilitar la importación de datasets mixtos.
     }),
     defineField({
       name: 'explanation',
