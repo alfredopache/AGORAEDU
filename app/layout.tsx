@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     title: 'AgoraEDU',
     images: ['/og-main.png'],
   },
-  icons: { icon: '/favicon.ico', apple: '/apple-icon.png' },
+  icons: { icon: '/images/logo.png', apple: '/images/logo.png' },
 }
 
 export default async function RootLayout({

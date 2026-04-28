@@ -69,32 +69,41 @@ export function EduIAMainLayout() {
     setSidebarOpen(false)
   }
 
-  const handleConversationSaved = () => {
-    loadConversations()
+  const handleConversationSaved = async (conversationId?: string | null) => {
+    await loadConversations()
+    if (conversationId) {
+      setCurrentConversationId(conversationId)
+    }
   }
 
   const handleDeleteConversation = async (conversationId: string) => {
     const ok = confirm('¿Seguro que quieres borrar esta conversación?')
-    if (!ok) return
+    if (!ok) return false
     try {
       const response = await fetch(`/api/conversations?id=${conversationId}&sessionId=${sessionId}`, {
         method: 'DELETE',
       })
       if (response.ok) {
+        if (currentConversationId === conversationId) {
+          setCurrentConversationId(null)
+        }
         loadConversations()
+        return true
       } else {
         const data = await response.json()
         alert(data?.error || 'Error borrando conversación')
+        return false
       }
     } catch (err) {
       console.error('Error borrando conversación:', err)
       alert('Error borrando conversación')
+      return false
     }
   }
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-slate-950 dark:via-purple-950/20 dark:to-slate-950 pt-20">
-      <div className="h-full flex">
+    <div className="relative min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-slate-950 dark:via-purple-950/20 dark:to-slate-950">
+      <div className="min-h-screen flex">
         {/* Sidebar Desktop */}
         <aside className="hidden lg:flex w-80 flex-col border-r border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl">
           <ConversationSidebar
@@ -149,7 +158,7 @@ export function EduIAMainLayout() {
         </AnimatePresence>
 
         {/* Main Content Area */}
-        <main className="flex-1 min-h-0 flex flex-col overflow-auto">
+        <main className="flex-1 min-h-0 flex flex-col">
           {/* Header con modo selector */}
           <div className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-4">
             <div className="flex items-center justify-between max-w-7xl mx-auto">
@@ -202,7 +211,7 @@ export function EduIAMainLayout() {
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1">
             <AnimatePresence mode="wait">
               {mode === "chat" ? (
                 <ChatMode
@@ -210,6 +219,7 @@ export function EduIAMainLayout() {
                   sessionId={sessionId}
                   conversationId={currentConversationId}
                   onConversationSaved={handleConversationSaved}
+                  onDeleteConversation={handleDeleteConversation}
                 />
               ) : (
                 <ExamMode

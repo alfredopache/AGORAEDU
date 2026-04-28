@@ -49,6 +49,12 @@ function parseCorrectIndex(resp?: string, options: string[]) {
     const idx = letter[1].toUpperCase().charCodeAt(0) - 65
     if (idx >= 0 && idx < options.length) return idx
   }
+  // Try numeric index like 1, 2, 3 (common in some exports)
+  const num = r.match(/^([1-9])[\)\.]?$/)
+  if (num) {
+    const idx = Number(num[1]) - 1
+    if (idx >= 0 && idx < options.length) return idx
+  }
   // Try single letter anywhere
   const letter2 = r.match(/([A-Z])(?!.*[A-Z])/) // last letter
   if (letter2) {

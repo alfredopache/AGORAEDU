@@ -27,7 +27,7 @@ interface ExamQuestion {
   subject: string
   topic?: string
   difficulty: string
-  options: Array<{
+  options?: Array<{
     text: string
     isCorrect: boolean
   }>
@@ -42,8 +42,8 @@ interface ExamQuestion {
 
 interface UserAnswer {
   questionId: string
-  selectedOption: number
-  isCorrect: boolean
+  selectedOption?: number | string
+  isCorrect?: boolean
   timeSpent: number
 }
 
@@ -79,6 +79,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
   const [questions, setQuestions] = useState<ExamQuestion[]>([])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([])
+  const [openAnswer, setOpenAnswer] = useState<string>("")
   const [startTime, setStartTime] = useState<number>(0)
   const [questionStartTime, setQuestionStartTime] = useState<number>(0)
   const [totalTime, setTotalTime] = useState<number>(0)
@@ -120,13 +121,13 @@ export function ExamMode({ sessionId }: ExamModeProps) {
         throw new Error("Error obteniendo preguntas")
       }
 
-      const data = await response.json()
-      
-      if (data.questions.length === 0) {
-        alert("No hay preguntas disponibles para esta configuración. Intenta con otra materia o dificultad.")
-        setIsLoading(false)
-        return
-      }
+        const data = await response.json()
+
+        if (!data || !Array.isArray(data.questions) || data.questions.length === 0) {
+          alert("No hay preguntas disponibles para esta configuración. Intenta con otra materia o dificultad.")
+          setIsLoading(false)
+          return
+        }
 
       setQuestions(data.questions)
       setExamState("taking")
@@ -144,7 +145,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
   const handleAnswer = (optionIndex: number) => {
     const currentQuestion = questions[currentQuestionIndex]
     const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000)
-    const isCorrect = currentQuestion.options[optionIndex].isCorrect
+    const isCorrect = Array.isArray(currentQuestion.options) ? currentQuestion.options[optionIndex]?.isCorrect : undefined
 
     const answer: UserAnswer = {
       questionId: currentQuestion._id,
@@ -165,13 +166,38 @@ export function ExamMode({ sessionId }: ExamModeProps) {
     }
   }
 
+  const handleOpenSubmit = (text: string) => {
+    const currentQuestion = questions[currentQuestionIndex]
+    const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000)
+
+    const answer: UserAnswer = {
+      questionId: currentQuestion._id,
+      selectedOption: text,
+      // isCorrect stays undefined for open questions (manual grading)
+      timeSpent,
+    }
+
+    const newAnswers = [...userAnswers, answer]
+    setUserAnswers(newAnswers)
+    setOpenAnswer("")
+
+    if (currentQuestionIndex === questions.length - 1) {
+      finishExam(newAnswers)
+    } else {
+      setCurrentQuestionIndex(currentQuestionIndex + 1)
+      setQuestionStartTime(Date.now())
+    }
+  }
+
   const finishExam = async (answers: UserAnswer[]) => {
     const totalTimeSpent = Math.floor((Date.now() - startTime) / 1000)
     setTotalTime(totalTimeSpent)
 
     const correctCount = answers.filter((a) => a.isCorrect).length
-    const scorePercentage = Math.round((correctCount / questions.length) * 100)
-    setScore(scorePercentage)
+    const gradedCount = answers.filter((a) => typeof a.isCorrect !== 'undefined').length
+    const scorePercentage = gradedCount > 0 ? Math.round((correctCount / gradedCount) * 100) : 0
+    const clampedScore = Math.max(0, Math.min(100, scorePercentage))
+    setScore(clampedScore)
 
     // Guardar intento en la base de datos
     try {
@@ -198,7 +224,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
               source: q.source,
             },
           })),
-          score: scorePercentage,
+          score: clampedScore,
           totalQuestions: questions.length,
           correctAnswers: correctCount,
           totalTime: totalTimeSpent,
@@ -234,7 +260,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="h-full overflow-y-auto p-8"
+        className="h-full p-8"
       >
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
@@ -403,7 +429,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
         </div>
 
         {/* Question Area */}
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 p-8">
           <div className="max-w-4xl mx-auto">
             <AnimatePresence mode="wait">
               <motion.div
@@ -444,7 +470,8 @@ export function ExamMode({ sessionId }: ExamModeProps) {
 
                   {/* Options */}
                   <div className="space-y-3">
-                    {currentQuestion.options.map((option, index) => (
+                    {Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0 ? (
+                      currentQuestion.options.map((option, index) => (
                       <button
                         key={index}
                         onClick={() => handleAnswer(index)}
@@ -460,7 +487,26 @@ export function ExamMode({ sessionId }: ExamModeProps) {
                           <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-purple-600 opacity-0 group-hover:opacity-100 transition-all" />
                         </div>
                       </button>
-                    ))}
+                      ))
+                    ) : (
+                      <div className="space-y-3">
+                        <textarea
+                          value={openAnswer}
+                          onChange={(e) => setOpenAnswer(e.target.value)}
+                          placeholder="Escribe tu respuesta aquí..."
+                          className="w-full min-h-[120px] p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                        />
+                        <div className="flex justify-end">
+                          <button
+                            onClick={() => handleOpenSubmit(openAnswer)}
+                            disabled={!openAnswer.trim()}
+                            className="px-6 py-2 rounded-lg bg-purple-600 text-white disabled:opacity-50"
+                          >
+                            Enviar respuesta
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -501,15 +547,16 @@ export function ExamMode({ sessionId }: ExamModeProps) {
   // RESULTS VIEW
   if (examState === "results") {
     const correctCount = userAnswers.filter((a) => a.isCorrect).length
-    const incorrectCount = userAnswers.length - correctCount
-    const avgTime = Math.round(totalTime / questions.length)
+    const gradedCount = userAnswers.filter((a) => typeof a.isCorrect !== 'undefined').length
+    const incorrectCount = gradedCount - correctCount
+    const avgTime = Math.round(totalTime / Math.max(questions.length, 1))
 
     return (
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="h-full overflow-y-auto p-8"
+        className="h-full p-8"
       >
         <div className="max-w-5xl mx-auto">
           {/* Score Header */}
@@ -663,37 +710,44 @@ export function ExamMode({ sessionId }: ExamModeProps) {
 
                         {/* Opciones */}
                         <div className="space-y-2">
-                          {question.options.map((option, oIndex) => {
-                            const wasSelected = userAnswer?.selectedOption === oIndex
-                            const isCorrectOption = option.isCorrect
+                          {Array.isArray(question.options) && question.options.length > 0 ? (
+                            question.options.map((option, oIndex) => {
+                              const wasSelected = userAnswer?.selectedOption === oIndex
+                              const isCorrectOption = option.isCorrect
 
-                            return (
-                              <div
-                                key={oIndex}
-                                className={cn(
-                                  "p-3 rounded-xl border-2 flex items-center gap-3",
-                                  isCorrectOption
-                                    ? "bg-green-100 dark:bg-green-900/20 border-green-400 dark:border-green-500"
-                                    : wasSelected
-                                    ? "bg-red-100 dark:bg-red-900/20 border-red-400 dark:border-red-500"
-                                    : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
-                                )}
-                              >
-                                <span className="font-bold text-slate-700 dark:text-slate-300">
-                                  {String.fromCharCode(65 + oIndex)}.
-                                </span>
-                                <span className="flex-1 text-sm text-slate-800 dark:text-slate-200">
-                                  {option.text}
-                                </span>
-                                {isCorrectOption && (
-                                  <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-                                )}
-                                {wasSelected && !isCorrectOption && (
-                                  <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-                                )}
-                              </div>
-                            )
-                          })}
+                              return (
+                                <div
+                                  key={oIndex}
+                                  className={cn(
+                                    "p-3 rounded-xl border-2 flex items-center gap-3",
+                                    isCorrectOption
+                                      ? "bg-green-100 dark:bg-green-900/20 border-green-400 dark:border-green-500"
+                                      : wasSelected
+                                      ? "bg-red-100 dark:bg-red-900/20 border-red-400 dark:border-red-500"
+                                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                                  )}
+                                >
+                                  <span className="font-bold text-slate-700 dark:text-slate-300">
+                                    {String.fromCharCode(65 + oIndex)}.
+                                  </span>
+                                  <span className="flex-1 text-sm text-slate-800 dark:text-slate-200">
+                                    {option.text}
+                                  </span>
+                                  {isCorrectOption && (
+                                    <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                                  )}
+                                  {wasSelected && !isCorrectOption && (
+                                    <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                                  )}
+                                </div>
+                              )
+                            })
+                          ) : (
+                            <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-700/30">
+                              <p className="text-sm font-medium">Respuesta abierta del alumno:</p>
+                              <p className="mt-2 text-sm">{String(userAnswer?.selectedOption ?? '— Sin respuesta')}</p>
+                            </div>
+                          )}
                         </div>
 
                         {/* Explicación */}

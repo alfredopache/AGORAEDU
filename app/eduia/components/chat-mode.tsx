@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { useSession } from "next-auth/react"
 import { Send, Loader2, Bot, User, Sparkles, BookOpen, Lightbulb } from "lucide-react"
 import { motion as motionBase, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
@@ -18,7 +19,8 @@ interface Message {
 interface ChatModeProps {
   sessionId: string
   conversationId: string | null
-  onConversationSaved: () => void
+  onConversationSaved: (conversationId?: string | null) => void
+  onDeleteConversation?: (conversationId: string) => Promise<boolean>
 }
 
 type ChatScope = "ambito_linguistico" | "ambito_cientifico"
@@ -53,7 +55,8 @@ const QUICK_ACTIONS = [
   { label: "Resumir tema", prompt: "Hazme un resumen completo sobre: ", icon: Sparkles },
 ]
 
-export function ChatMode({ sessionId, conversationId, onConversationSaved }: ChatModeProps) {
+export function ChatMode({ sessionId, conversationId, onConversationSaved, onDeleteConversation }: ChatModeProps) {
+  const { data: session } = useSession()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -67,6 +70,7 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
   const [examConfig, setExamConfig] = useState<any>(null)
   const [examResults, setExamResults] = useState<any>(null)
 
+  const userLabel = session?.user?.name ? session.user.name : "Google"
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -138,7 +142,8 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
       })
 
       if (response.ok) {
-        onConversationSaved()
+        const data = await response.json()
+        onConversationSaved(data.conversationId || null)
       }
     } catch (error) {
       console.error("Error guardando conversación:", error)
@@ -162,6 +167,15 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
         subject = 'ambito_linguistico'
       } else if (/(cientific|matem|tic|ciencias)/i.test(lowerText)) {
         subject = 'ambito_cientifico'
+      }
+    }
+
+    // Detectar tema específico de la solicitud, p.e. "sobre fracciones" o "tema de historia"
+    const topicMatch = lowerText.match(/(?:sobre|tema de|acerca de|referente a)\s+(?:el |la |los |las )?([a-záéíóúñ0-9\s]+?)(?=(?:[,.]|$| por | con | para | y | de \d| preguntas?))/i)
+    if (topicMatch) {
+      const rawTopic = topicMatch[1].trim()
+      if (!/(examen|prueba|preguntas?|ejercicio|ejercicios|quiero|dame|hazme|te|me|que|sobre|tema)/i.test(rawTopic)) {
+        topic = rawTopic.replace(/\s{2,}/g, ' ')
       }
     }
 
@@ -307,6 +321,15 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
     textareaRef.current?.focus()
   }
 
+  const handleDeleteCurrentConversation = async () => {
+    if (!conversationId || !onDeleteConversation) return
+    const deleted = await onDeleteConversation(conversationId)
+    if (deleted) {
+      setMessages([])
+      onConversationSaved()
+    }
+  }
+
   const handleExamComplete = (results: any) => {
     setExamResults(results)
     setExamMode('results')
@@ -383,7 +406,7 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
       ) : (
         <>
           {/* Área de Mensajes */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
+            <div className="flex-1 min-h-0 p-6 space-y-4">
             <div className="max-w-4xl mx-auto">
               <div className="mb-6 rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 p-4">
                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-3">
@@ -413,6 +436,16 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
                 </div>
               </div>
             </div>
+            {conversationId && onDeleteConversation && (
+              <div className="max-w-4xl mx-auto flex justify-end">
+                <button
+                  onClick={handleDeleteCurrentConversation}
+                  className="text-sm text-rose-600 dark:text-rose-400 hover:text-rose-500 transition-colors"
+                >
+                  Eliminar chat actual
+                </button>
+              </div>
+            )}
             {messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center px-4">
                 <div className="bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 p-12 rounded-3xl mb-8 max-w-2xl">
@@ -491,12 +524,23 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
                     )}
                     <div
                       className={cn(
-                        "max-w-[85%] rounded-2xl p-4 shadow-lg",
+                        "max-w-[85%] rounded-2xl p-3 shadow-sm border border-slate-200 dark:border-slate-700",
                         message.role === "user"
-                          ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-                          : "bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700"
+                          ? "bg-slate-900 text-white"
+                          : "bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                       )}
                     >
+                      <div className="mb-2 flex items-center justify-between gap-3 text-[11px] uppercase tracking-[0.18em] font-semibold">
+                        <span className={message.role === "user" ? "text-blue-200" : "text-purple-600 dark:text-purple-300"}>
+                          {message.role === "user" ? userLabel : "AccesoIA"}
+                        </span>
+                        <span className="text-slate-400 dark:text-slate-500">
+                          {message.timestamp.toLocaleTimeString("es-ES", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
                       {message.role === "assistant" ? (
                         <MarkdownRenderer content={message.content} />
                       ) : (
@@ -504,17 +548,6 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved }: Cha
                           {message.content}
                         </p>
                       )}
-                      <p
-                        className={cn(
-                          "text-xs mt-2 opacity-60",
-                          message.role === "user" ? "text-white" : "text-slate-500"
-                        )}
-                      >
-                        {message.timestamp.toLocaleTimeString("es-ES", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
                     </div>
                     {message.role === "user" && (
                       <div className="bg-gradient-to-br from-blue-500 to-purple-500 p-2.5 rounded-xl h-fit flex-shrink-0">

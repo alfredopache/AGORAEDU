@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { client } from "@/sanity/lib/client"
+import fs from 'fs/promises'
+import path from 'path'
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,274 +18,172 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Mapas para los nuevos ámbitos (opciones agrupadas)
-    const AMBITO_MAP: Record<string, string[]> = {
-      // Ámbito lingüístico-comunicativo: lenguas, comentario, historia (se representan con subjects existentes)
-      ambito_linguistico: ["lengua", "ingles", "sociales"],
-      // Ámbito científico-matemático: matemáticas, TIC y ciencias sociales
-      ambito_cientifico: ["matematicas", "sociales", "tic"],
+    // Forzar uso del dataset local: leer el JSON de `data/` y devolver sólo preguntas normalizadas
+    const datasetFile = path.join(process.cwd(), 'data', 'W5_dataset_ACCESO_IA_examenes_2017_2025_v3_GOLD_INFRA_READY.json')
+
+    // Helpers (copiados del script de importación para mantener mapeo consistente)
+    function mapSubject(materia?: string) {
+      if (!materia) return 'general'
+      const m = materia.toString().toLowerCase()
+      if (m.includes('matem')) return 'matematicas'
+      if (m.includes('ingl')) return 'ingles'
+      if (m.includes('leng')) return 'lengua'
+      if (m.includes('hist') || m.includes('geogr') || m.includes('social')) return 'sociales'
+      if (m.includes('natur') || m.includes('cienc')) return 'sociales'
+      return 'general'
     }
 
-    // Helper: generar preguntas de respaldo cuando la base de datos no tenga suficientes
-    const ALL_SUBJECTS = ["matematicas", "lengua", "ingles", "sociales", "tic"]
-
-    function randomInt(min: number, max: number) {
-      return Math.floor(Math.random() * (max - min + 1)) + min
+    function mapDifficulty(d?: any) {
+      const n = Number(d)
+      if (isNaN(n)) return d === 'avanzado' ? 'avanzado' : 'intermedio'
+      if (n <= 1) return 'basico'
+      if (n === 2) return 'intermedio'
+      return 'avanzado'
     }
 
-    function makeId(prefix = "fallback") {
-      return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    function parseClosedOptions(raw?: string) {
+      if (!raw) return []
+      const parts = raw.split(/\s*\|\s*|;|\r?\n/).map(s => s.trim()).filter(Boolean)
+      const cleaned = parts.map(p => p.replace(/^[A-Z]\)\s*/i, '').replace(/^[A-Z]\.\s*/i, '').replace(/^\([A-Z]\)\s*/i, '').trim())
+      return cleaned
     }
 
-    // --- Utilidades para evitar opciones repetidas y añadir variedad ---
-    function shuffle<T>(arr: T[]) {
-      for (let i = arr.length - 1; i > 0; i--) {
+    function parseCorrectIndex(resp?: string, options: string[]) {
+      if (!resp) return -1
+      const r = resp.toString().trim()
+      const letter = r.match(/^['"]?([A-Z])[\)\.]?/i)
+      if (letter) {
+        const idx = letter[1].toUpperCase().charCodeAt(0) - 65
+        if (idx >= 0 && idx < options.length) return idx
+      }
+      // numeric index like '1' or '2.'
+      const num = r.match(/^([1-9])[\)\.]?$/)
+      if (num) {
+        const idx = Number(num[1]) - 1
+        if (idx >= 0 && idx < options.length) return idx
+      }
+      const letter2 = r.match(/([A-Z])(?!.*[A-Z])/) // last letter
+      if (letter2) {
+        const idx = letter2[1].toUpperCase().charCodeAt(0) - 65
+        if (idx >= 0 && idx < options.length) return idx
+      }
+      const lowResp = r.replace(/^"|"$/g, '').toLowerCase()
+      for (let i = 0; i < options.length; i++) {
+        const opt = options[i].toLowerCase()
+        if (opt === lowResp || opt.includes(lowResp) || lowResp.includes(opt)) return i
+      }
+      return -1
+    }
+
+    function isItemActive(item: any) {
+      if (typeof item.APTA_MOTOR === 'undefined' && typeof item.APTA_CHATBOT === 'undefined') return true
+      const val = String(item.APTA_MOTOR || item.APTA_CHATBOT || '').toLowerCase()
+      return val.startsWith('s') || val === 'true' || val === '1'
+    }
+
+    function shuffleArray<T>(array: T[]) {
+      const copy = [...array]
+      for (let i = copy.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1))
-        const tmp = arr[i]
-        arr[i] = arr[j]
-        arr[j] = tmp
+        ;[copy[i], copy[j]] = [copy[j], copy[i]]
       }
-      return arr
+      return copy
     }
 
-    function ensureUniqueOptions(opts: Array<{ text: string; isCorrect: boolean }>, desired = 4) {
-      const map = new Map<string, { text: string; isCorrect: boolean }>()
-      opts.forEach(o => map.set(o.text, { text: o.text, isCorrect: o.isCorrect }))
-      let attempts = 0
-      while (map.size < desired && attempts < 20) {
-        const candidate = `Opción ${Math.random().toString(36).slice(2, 6)}`
-        if (!map.has(candidate)) map.set(candidate, { text: candidate, isCorrect: false })
-        attempts++
-      }
-      const arr = Array.from(map.values()).slice(0, desired)
-      if (!arr.some(a => a.isCorrect)) {
-        arr[0].isCorrect = true
-      } else if (arr.filter(a => a.isCorrect).length > 1) {
-        let found = false
-        arr.forEach((a) => {
-          if (a.isCorrect) {
-            if (!found) found = true
-            else a.isCorrect = false
-          }
-        })
-      }
-      return shuffle(arr)
+    // Cargar dataset local
+    let raw: string | null = null
+    try {
+      raw = await fs.readFile(datasetFile, 'utf-8')
+    } catch (err) {
+      console.error('Dataset local no encontrado:', datasetFile)
+      return NextResponse.json({ error: 'Dataset local no encontrado: ' + datasetFile }, { status: 500 })
     }
 
-    // Nueva versión del generador de preguntas de respaldo con mayor variedad
-    function generateFallbackQuestion(subjectName: string, difficultyLevel: string, topic?: string) {
-      const uid = makeId(subjectName)
-      const baseTopic = topic || (subjectName === 'matematicas' ? 'Álgebra' : subjectName === 'lengua' ? 'Ortografía' : 'General')
-      let questionText = ''
-      let rawOptions: Array<{ text: string; isCorrect: boolean }> = []
+    let json: any = {}
+    try {
+      json = JSON.parse(raw)
+    } catch (err) {
+      console.error('Error parseando dataset local:', err)
+      return NextResponse.json({ error: 'Error parseando dataset local' }, { status: 500 })
+    }
 
-      if (subjectName === 'matematicas') {
-        const a = randomInt(1, 12)
-        const b = randomInt(1, 12)
-        questionText = `¿Cuál es el resultado de ${a} × ${b}?`
-        const correct = a * b
-        const wrong = new Set<number>()
-        while (wrong.size < 3) {
-          const candidate = correct + (Math.random() < 0.5 ? -randomInt(1, 6) : randomInt(1, 12))
-          if (candidate > 0 && candidate !== correct) wrong.add(candidate)
-        }
-        rawOptions = [{ text: String(correct), isCorrect: true }, ...Array.from(wrong).map(n => ({ text: String(n), isCorrect: false }))]
-      } else if (subjectName === 'ingles') {
-        const pool: Array<[string, string]> = [
-          ['hola', 'hello'], ['adiós', 'goodbye'], ['gracias', 'thanks'], ['por favor', 'please'], ['buenos días', 'good morning'], ['noche', 'night']
-        ]
-        const pick = pool[Math.floor(Math.random() * pool.length)]
-        questionText = `Choose the correct translation for: '${pick[0]}'`
-        const englishDistractors = ['hello', 'goodbye', 'please', 'thanks', 'good morning', 'night'].filter(w => w !== pick[1])
-        shuffle(englishDistractors)
-        rawOptions = [{ text: pick[1], isCorrect: true }, ...englishDistractors.slice(0, 3).map(t => ({ text: t, isCorrect: false }))]
-      } else if (subjectName === 'lengua') {
-        const pool = [
-          { base: ['arbol', 'árbol'] },
-          { base: ['lapiz', 'lápiz'] },
-          { base: ['facil', 'fácil'] },
-          { base: ['cafe', 'café'] },
-          { base: ['camion', 'camión'] }
-        ]
-        const pick = pool[Math.floor(Math.random() * pool.length)]
-        questionText = `Selecciona la opción con la palabra correctamente acentuada: '${pool.map(p => p.base[0]).slice(0,4).join(', ')}'`
-        const correct = pick.base[1]
-        const distractors = pool.map(p => p.base[1]).filter(w => w !== correct)
-        shuffle(distractors)
-        rawOptions = [{ text: correct, isCorrect: true }, ...distractors.slice(0, 3).map(t => ({ text: t, isCorrect: false }))]
-      } else if (subjectName === 'sociales') {
-        const countries = [
-          ['España', 'Europa'], ['Brasil', 'América'], ['Japón', 'Asia'], ['Egipto', 'África'], ['Australia', 'Oceanía']
-        ]
-        const pick = countries[Math.floor(Math.random() * countries.length)]
-        questionText = `¿En qué continente se encuentra ${pick[0]}?`
-        const continents = ['Europa', 'Asia', 'África', 'América', 'Oceanía']
-        const wrong = continents.filter(c => c !== pick[1])
-        shuffle(wrong)
-        rawOptions = [{ text: pick[1], isCorrect: true }, ...wrong.slice(0, 3).map(w => ({ text: w, isCorrect: false }))]
-      } else if (subjectName === 'tic') {
-        const pairs = [
-          ['HTML', 'HyperText Markup Language'],
-          ['CSS', 'Cascading Style Sheets'],
-          ['JSON', 'JavaScript Object Notation'],
-          ['API', 'Application Programming Interface']
-        ]
-        const pick = pairs[Math.floor(Math.random() * pairs.length)]
-        questionText = `¿Qué significa '${pick[0]}'?`
-        const wrong = pairs.map(p => p[1]).filter(p => p !== pick[1])
-        shuffle(wrong)
-        rawOptions = [{ text: pick[1], isCorrect: true }, ...wrong.slice(0, 3).map(t => ({ text: t, isCorrect: false }))]
-      } else {
-        questionText = `Pregunta de ${subjectName} (generada aleatoriamente)`
-        rawOptions = [
-          { text: 'Opción A', isCorrect: Math.random() < 0.5 },
-          { text: 'Opción B', isCorrect: false },
-          { text: 'Opción C', isCorrect: false },
-          { text: 'Opción D', isCorrect: false }
-        ]
-      }
+    const items = json.dataset_preguntas || json.dataset || json.items || []
 
-      const options = ensureUniqueOptions(rawOptions, 4)
+    // Normalizar preguntas
+    const normalized = items.map((item: any) => {
+      const idUnico = item.ID_Unico || (item.ID ? `ID-${item.ID}` : undefined)
+      const _id = idUnico ? `examQuestion-${idUnico}` : `examQuestion-dataset-${Math.random().toString(36).slice(2, 9)}`
+      const optionsText = parseClosedOptions(item.OPCIONES_CERRADAS || item.OPCIONES || item.OPTIONS || '')
+      const correctIndex = parseCorrectIndex(item.RESPUESTA_CORRECTA || item.RESPUESTA_MODELO || item.RESPUESTA_MODELO_EXCELENTE || item.RESPUESTA || '', optionsText)
+
+      const options = optionsText.length > 0 ? optionsText.map((t: string, i: number) => ({ text: t, isCorrect: i === correctIndex })) : undefined
 
       return {
-        _id: uid,
-        question: questionText,
-        subject: subjectName,
-        topic: baseTopic,
-        difficulty: difficultyLevel,
-        options,
-        explanation: `Explicación generada: la respuesta correcta es ${options.find(o => o.isCorrect)?.text}`,
-        source: { name: "Generado aleatoriamente", year: new Date().getFullYear(), region: "Auto" },
-      }
-    }
-
-    function generateFallbackQuestions(countNeeded: number, subjectSources: string[] | string, difficultyLevel: string, topic?: string) {
-      const out: any[] = []
-      for (let i = 0; i < countNeeded; i++) {
-        let subj = typeof subjectSources === 'string' ? subjectSources : subjectSources[Math.floor(Math.random() * subjectSources.length)]
-        if (!subj) subj = ALL_SUBJECTS[Math.floor(Math.random() * ALL_SUBJECTS.length)]
-        out.push(generateFallbackQuestion(subj, difficultyLevel, topic))
-      }
-      return out
-    }
-
-    // Si es mixto, obtener preguntas de todas las materias
-    if (subject === "mixto") {
-      const params: any = { difficulty }
-      let query = `*[_type == "examQuestion" && difficulty == $difficulty && isActive == true] {
         _id,
-        question,
-        subject,
-        topic,
-        difficulty,
+        question: item.Pregunta || item.question || item.enunciado || item.PREGUNTA || 'Sin enunciado',
+        subject: mapSubject(item.Materia || item.materia || item.SUBJETO || item.SUBJECT),
+        topic: item.Tema || item.SUBTEMA || item.topic || '',
+        difficulty: mapDifficulty(item.Dificultad || item.DIFICULTAD || item.Nivel || item.NIVEL || ''),
         options,
-        explanation,
-        source
-      }`
-
-      if (topic) {
-        // Usar match para permitir coincidencias parciales en topic
-        query = `*[_type == "examQuestion" && difficulty == $difficulty && topic match $topic && isActive == true] {
-          _id,
-          question,
-          subject,
-          topic,
-          difficulty,
-          options,
-          explanation,
-          source
-        }`
-        params.topic = `*${topic}*`
+        explanation: [item.Explicación, item.RUBRICA_MODELO, item.RESPUESTA_MODELO_EXCELENTE, item.Explicacion].filter(Boolean).join('\n\n'),
+        source: { name: item.FUENTE || item.FUENTE_TEXTO || item.Fuente || 'Desconocida', year: item.Año || item.ANIO || item.year || null, region: item.FUENTE_TEXTO || 'Nacional' },
+        original: item,
+        isActive: isItemActive(item),
       }
+    })
 
-      const allQuestions = await client.fetch(query, params)
-      // Mezclar aleatoriamente y devolver exactamente 'count'
-      const shuffled = allQuestions.sort(() => Math.random() - 0.5)
-      let final = shuffled.slice(0, count)
-      if (final.length < count) {
-        const need = count - final.length
-        const generated = generateFallbackQuestions(need, ALL_SUBJECTS, difficulty, topic ?? undefined)
-        final = final.concat(generated).slice(0, count)
-      }
-      return NextResponse.json({ questions: final })
+    // Eliminar preguntas duplicadas basadas en el texto, materia, dificultad y opciones
+    const uniqueQuestions = new Map<string, any>()
+    const normalizedUnique = normalized.filter((q: any) => {
+      const questionText = q.question?.toString().trim().replace(/\s+/g, ' ').toLowerCase() || ''
+      const optionsText = Array.isArray(q.options) ? q.options.map((o) => o.text.trim().toLowerCase()).join('|') : ''
+      const dedupeKey = `${questionText}|${q.subject}|${q.difficulty}|${optionsText}`
+      if (uniqueQuestions.has(dedupeKey)) return false
+      uniqueQuestions.set(dedupeKey, true)
+      return true
+    })
+
+    // Filtrar por isActive
+    const activeOnly = normalizedUnique.filter((q: any) => q.isActive)
+
+    // Mapas para ámbitos compuestos (mantener compatibilidad con UI)
+    const AMBITO_MAP: Record<string, string[]> = {
+      ambito_linguistico: ['lengua', 'ingles', 'sociales'],
+      ambito_cientifico: ['matematicas', 'sociales', 'tic'],
     }
 
-    // Si es un ámbito compuesto, buscar por varios subjects
-    if (AMBITO_MAP[subject]) {
-      const subjects = AMBITO_MAP[subject]
-      const params: any = { subjects, difficulty }
-      let query = `*[_type == "examQuestion" && subject in $subjects && difficulty == $difficulty && isActive == true] {
-        _id,
-        question,
-        subject,
-        topic,
-        difficulty,
-        options,
-        explanation,
-        source
-      }`
-
-      if (topic) {
-        query = `*[_type == "examQuestion" && subject in $subjects && difficulty == $difficulty && topic match $topic && isActive == true] {
-          _id,
-          question,
-          subject,
-          topic,
-          difficulty,
-          options,
-          explanation,
-          source
-        }`
-        params.topic = `*${topic}*`
+    // Filtrado según subject/difficulty/topic
+    let candidates = activeOnly.filter((q: any) => q.difficulty === difficulty)
+    if (subject !== 'mixto') {
+      if (AMBITO_MAP[subject]) {
+        const subs = AMBITO_MAP[subject]
+        candidates = candidates.filter((q: any) => subs.includes(q.subject))
+      } else {
+        // permitir subject:topic en formato 'lengua:comentario'
+        let subjParam = subject
+        let topicParam: string | undefined = undefined
+        if (subject.includes(':')) {
+          const parts = subject.split(':')
+          subjParam = parts[0]
+          topicParam = parts.slice(1).join(':')
+        }
+        candidates = candidates.filter((q: any) => q.subject === subjParam)
+        if (topicParam) {
+          const t = topicParam.toLowerCase()
+          candidates = candidates.filter((q: any) => (q.topic || '').toLowerCase().includes(t))
+        }
       }
-
-      const questions = await client.fetch(query, params)
-      const shuffled = questions.sort(() => Math.random() - 0.5)
-      let final = shuffled.slice(0, count)
-      if (final.length < count) {
-        const need = count - final.length
-        const generated = generateFallbackQuestions(need, subjects, difficulty, topic ?? undefined)
-        final = final.concat(generated).slice(0, count)
-      }
-      return NextResponse.json({ questions: final })
     }
 
-    // Caso por subject individual
-    // Caso por subject individual (posible filtro por topic)
-    const params: any = { subject, difficulty }
-    let query = `*[_type == "examQuestion" && subject == $subject && difficulty == $difficulty && isActive == true] {
-      _id,
-      question,
-      subject,
-      topic,
-      difficulty,
-      options,
-      explanation,
-      source
-    }`
-
+    // Si se proporciona un parámetro topic separado, aplicarlo también
     if (topic) {
-      query = `*[_type == "examQuestion" && subject == $subject && difficulty == $difficulty && topic match $topic && isActive == true] {
-        _id,
-        question,
-        subject,
-        topic,
-        difficulty,
-        options,
-        explanation,
-        source
-      }`
-      params.topic = `*${topic}*`
+      const t = topic.toLowerCase()
+      candidates = candidates.filter((q: any) => (q.topic || '').toLowerCase().includes(t))
     }
 
-    const questions = await client.fetch(query, params)
-    const shuffled = questions.sort(() => Math.random() - 0.5)
-    let final = shuffled.slice(0, count)
-    if (final.length < count) {
-      const need = count - final.length
-      const generated = generateFallbackQuestions(need, subject, difficulty, topic ?? undefined)
-      final = final.concat(generated).slice(0, count)
-    }
+    // Mezclar y recortar a 'count' sin repetir preguntas
+    const final = shuffleArray(candidates).slice(0, Math.min(count, candidates.length))
+
     return NextResponse.json({ questions: final })
   } catch (error) {
     console.error("Error obteniendo preguntas:", error)

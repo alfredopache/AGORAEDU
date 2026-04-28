@@ -56,7 +56,7 @@ export function ConversationSidebar({
       </div>
 
       {/* Lista de Conversaciones */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="flex-1 p-4 space-y-2">
         {conversations.length === 0 ? (
           <div className="text-center py-12 text-slate-500 dark:text-slate-400">
             <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -107,16 +107,18 @@ export function ConversationSidebar({
 
                 {/* Delete button */}
                 {onDeleteConversation && (
-                  <button
+                  <div
                     onClick={(e) => {
                       e.stopPropagation()
                       onDeleteConversation(conversation._id)
                     }}
                     title="Borrar conversación"
-                    className="ml-2 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
+                    role="button"
+                    tabIndex={0}
+                    className="ml-2 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4 text-rose-600" />
-                  </button>
+                  </div>
                 )}
               </div>
             </motion.button>

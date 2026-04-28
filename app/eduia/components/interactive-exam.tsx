@@ -38,7 +38,7 @@ interface InteractiveExamProps {
 
 interface ExamResults {
   questions: ExamQuestion[]
-  userAnswers: number[]
+  userAnswers: Array<number | string>
   score: number
   timeSpent: number
   totalTime: number
@@ -47,7 +47,7 @@ interface ExamResults {
 export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExamProps) {
   const [questions, setQuestions] = useState<ExamQuestion[]>([])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
-  const [userAnswers, setUserAnswers] = useState<number[]>([])
+  const [userAnswers, setUserAnswers] = useState<Array<number | string>>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
     const [openAnswer, setOpenAnswer] = useState<string>("")
@@ -86,6 +86,18 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
     setSelectedOption(optionIndex)
     const newAnswers = [...userAnswers, optionIndex]
     setUserAnswers(newAnswers)
+    // Esperar 1 segundo antes de avanzar
+    setTimeout(() => {
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1)
+        setSelectedOption(null)
+        setQuestionStartTime(Date.now())
+      } else {
+        // Examen completado
+        finishExam(newAnswers)
+      }
+    }, 1500)
+  }
 
   const handleOpenSubmit = (text: string) => {
     if (selectedOption !== null) return
@@ -106,23 +118,8 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
     }, 1000)
   }
 
-    // Esperar 1 segundo antes de avanzar
-    setTimeout(() => {
-      if (currentQuestionIndex < questions.length - 1) {
-        setCurrentQuestionIndex(currentQuestionIndex + 1)
-        setSelectedOption(null)
-        setQuestionStartTime(Date.now())
-      } else {
-        // Examen completado
-        finishExam(newAnswers)
-      }
-    }, 1500)
-  }
-
-  const finishExam = (answers: number[]) => {
+  const finishExam = (answers: Array<number | string>) => {
     const totalTime = Date.now() - startTime
-    let correctCount = 0
-
     let correctCount = 0
     let gradedCount = 0
 
@@ -136,7 +133,8 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
       }
     })
 
-    const score = gradedCount > 0 ? Math.round((correctCount / gradedCount) * 100) : 0
+    let score = gradedCount > 0 ? Math.round((correctCount / gradedCount) * 100) : 0
+    score = Math.max(0, Math.min(100, score))
 
     onComplete({
       questions,
@@ -212,7 +210,7 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
       </div>
 
       {/* Contenido de la Pregunta */}
-      <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-slate-50 to-purple-50 dark:from-slate-900 dark:to-purple-900/20">
+      <div className="flex-1 p-6 bg-gradient-to-br from-slate-50 to-purple-50 dark:from-slate-900 dark:to-purple-900/20">
         <div className="max-w-4xl mx-auto">
           <AnimatePresence mode="wait">
             <motion.div
@@ -331,8 +329,8 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
                         )}
                       </motion.button>
                     )
-                  })}
-                  )}
+                  })
+                )}
                 </div>
 
                 {/* Fuente */}
@@ -426,7 +424,7 @@ export function ExamResultsView({ results, onNewExam, onBackToChat }: ExamResult
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-gradient-to-br from-slate-50 to-purple-50 dark:from-slate-900 dark:to-purple-900/20 p-6">
+    <div className="h-full hide-scrollbar bg-gradient-to-br from-slate-50 to-purple-50 dark:from-slate-900 dark:to-purple-900/20 p-6">
       <div className="max-w-5xl mx-auto">
         {/* Resultado Principal */}
         <motion.div
@@ -563,8 +561,9 @@ export function ExamResultsView({ results, onNewExam, onBackToChat }: ExamResult
           <div className="space-y-6">
             {results.questions.map((question, index) => {
               const userAnswer = results.userAnswers[index]
-              const isCorrect = question.options[userAnswer]?.isCorrect
-              const correctIndex = question.options.findIndex(opt => opt.isCorrect)
+              const hasOptions = Array.isArray(question.options) && question.options.length > 0
+              const correctIndex = hasOptions ? question.options.findIndex(opt => opt.isCorrect) : -1
+              const isCorrect = hasOptions && typeof userAnswer === 'number' ? question.options[userAnswer]?.isCorrect : false
 
               return (
                 <div
@@ -591,26 +590,33 @@ export function ExamResultsView({ results, onNewExam, onBackToChat }: ExamResult
                       </p>
                       
                       <div className="space-y-2 mb-3">
-                        {question.options.map((option, optIndex) => (
-                          <div
-                            key={optIndex}
-                            className={cn(
-                              "text-sm p-3 rounded-lg",
-                              optIndex === userAnswer && isCorrect && "bg-green-100 dark:bg-green-900/30 font-semibold text-green-900 dark:text-green-100",
-                              optIndex === userAnswer && !isCorrect && "bg-red-100 dark:bg-red-900/30 font-semibold text-red-900 dark:text-red-100",
-                              optIndex === correctIndex && optIndex !== userAnswer && "bg-green-100 dark:bg-green-900/30 font-semibold text-green-900 dark:text-green-100",
-                              optIndex !== userAnswer && optIndex !== correctIndex && "bg-slate-100 dark:bg-slate-700/30 text-slate-600 dark:text-slate-400"
-                            )}
-                          >
-                            <strong>{String.fromCharCode(65 + optIndex)})</strong> {option.text}
-                            {optIndex === correctIndex && (
-                              <span className="ml-2 text-green-600 dark:text-green-400">✓ Correcta</span>
-                            )}
-                            {optIndex === userAnswer && !isCorrect && (
-                              <span className="ml-2 text-red-600 dark:text-red-400">✗ Tu respuesta</span>
-                            )}
+                        {hasOptions ? (
+                          question.options.map((option, optIndex) => (
+                            <div
+                              key={optIndex}
+                              className={cn(
+                                "text-sm p-3 rounded-lg",
+                                typeof userAnswer === 'number' && optIndex === userAnswer && isCorrect && "bg-green-100 dark:bg-green-900/30 font-semibold text-green-900 dark:text-green-100",
+                                typeof userAnswer === 'number' && optIndex === userAnswer && !isCorrect && "bg-red-100 dark:bg-red-900/30 font-semibold text-red-900 dark:text-red-100",
+                                optIndex === correctIndex && optIndex !== userAnswer && "bg-green-100 dark:bg-green-900/30 font-semibold text-green-900 dark:text-green-100",
+                                (typeof userAnswer !== 'number' || (optIndex !== userAnswer && optIndex !== correctIndex)) && "bg-slate-100 dark:bg-slate-700/30 text-slate-600 dark:text-slate-400"
+                              )}
+                            >
+                              <strong>{String.fromCharCode(65 + optIndex)})</strong> {option.text}
+                              {optIndex === correctIndex && (
+                                <span className="ml-2 text-green-600 dark:text-green-400">✓ Correcta</span>
+                              )}
+                              {typeof userAnswer === 'number' && optIndex === userAnswer && !isCorrect && (
+                                <span className="ml-2 text-red-600 dark:text-red-400">✗ Tu respuesta</span>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-700/30">
+                            <p className="text-sm font-medium">Respuesta abierta del alumno:</p>
+                            <p className="mt-2 text-sm">{String(userAnswer ?? '— Sin respuesta')}</p>
                           </div>
-                        ))}
+                        )}
                       </div>
 
                       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
