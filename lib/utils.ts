@@ -22,3 +22,25 @@ export const getYouTubeThumbnail = (url: string) => {
     ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` 
     : "/placeholder.svg";
 };
+
+export const MAX_REDACTION_WORDS = 250
+export const MAX_REDACTION_LINES = 12
+
+export function getWordCount(text: string) {
+  return text
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length
+}
+
+export function getLineCount(text: string) {
+  return text === "" ? 0 : text.split(/\r\n|\r|\n/).length
+}
+
+export function clampRedactionText(text: string, maxWords: number, maxLines: number) {
+  const lines = text.split(/\r\n|\r|\n/).slice(0, maxLines)
+  const joined = lines.join("\n")
+  const tokens = joined.trim().split(/\s+/).filter(Boolean)
+  if (tokens.length <= maxWords) return joined
+  return tokens.slice(0, maxWords).join(" ")
+}

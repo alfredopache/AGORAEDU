@@ -17,7 +17,7 @@ import {
   GraduationCap,
   Lightbulb
 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, clampRedactionText, getWordCount, getLineCount, MAX_REDACTION_LINES, MAX_REDACTION_WORDS } from "@/lib/utils"
 
 const motion = motionBase as any
 
@@ -80,6 +80,12 @@ export function ExamMode({ sessionId }: ExamModeProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([])
   const [openAnswer, setOpenAnswer] = useState<string>("")
+  const openAnswerWordCount = getWordCount(openAnswer)
+  const openAnswerLineCount = getLineCount(openAnswer)
+  const isOpenAnswerValid =
+    openAnswer.trim().length > 0 &&
+    openAnswerWordCount <= MAX_REDACTION_WORDS &&
+    openAnswerLineCount <= MAX_REDACTION_LINES
   const [startTime, setStartTime] = useState<number>(0)
   const [questionStartTime, setQuestionStartTime] = useState<number>(0)
   const [totalTime, setTotalTime] = useState<number>(0)
@@ -167,6 +173,8 @@ export function ExamMode({ sessionId }: ExamModeProps) {
   }
 
   const handleOpenSubmit = (text: string) => {
+    if (!isOpenAnswerValid) return
+
     const currentQuestion = questions[currentQuestionIndex]
     const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000)
 
@@ -472,38 +480,44 @@ export function ExamMode({ sessionId }: ExamModeProps) {
                   <div className="space-y-3">
                     {Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0 ? (
                       currentQuestion.options.map((option, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleAnswer(index)}
-                        className="w-full text-left p-5 bg-slate-50 dark:bg-slate-900 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-500 transition-all group"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 group-hover:border-purple-500 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-slate-700 dark:text-slate-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-all">
-                            {String.fromCharCode(65 + index)}
+                        <button
+                          key={index}
+                          onClick={() => handleAnswer(index)}
+                          className="w-full text-left p-5 bg-slate-50 dark:bg-slate-900 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-500 transition-all group"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 group-hover:border-purple-500 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-slate-700 dark:text-slate-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-all">
+                              {String.fromCharCode(65 + index)}
+                            </div>
+                            <span className="flex-1 text-base text-slate-800 dark:text-slate-200 group-hover:text-purple-900 dark:group-hover:text-purple-300">
+                              {option.text}
+                            </span>
+                            <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-purple-600 opacity-0 group-hover:opacity-100 transition-all" />
                           </div>
-                          <span className="flex-1 text-base text-slate-800 dark:text-slate-200 group-hover:text-purple-900 dark:group-hover:text-purple-300">
-                            {option.text}
-                          </span>
-                          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-purple-600 opacity-0 group-hover:opacity-100 transition-all" />
-                        </div>
-                      </button>
+                        </button>
                       ))
                     ) : (
                       <div className="space-y-3">
                         <textarea
                           value={openAnswer}
-                          onChange={(e) => setOpenAnswer(e.target.value)}
+                          onChange={(e) => setOpenAnswer(clampRedactionText(e.target.value, MAX_REDACTION_WORDS, MAX_REDACTION_LINES))}
                           placeholder="Escribe tu respuesta aquí..."
+                          rows={8}
                           className="w-full min-h-[120px] p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                         />
-                        <div className="flex justify-end">
-                          <button
-                            onClick={() => handleOpenSubmit(openAnswer)}
-                            disabled={!openAnswer.trim()}
-                            className="px-6 py-2 rounded-lg bg-purple-600 text-white disabled:opacity-50"
-                          >
-                            Enviar respuesta
-                          </button>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="text-sm text-slate-500 dark:text-slate-400">
+                            {openAnswerWordCount}/{MAX_REDACTION_WORDS} palabras · {openAnswerLineCount}/{MAX_REDACTION_LINES} líneas
+                          </p>
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => handleOpenSubmit(openAnswer)}
+                              disabled={!isOpenAnswerValid}
+                              className="px-6 py-2 rounded-lg bg-purple-600 text-white disabled:opacity-50"
+                            >
+                              Enviar respuesta
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}

@@ -5,7 +5,7 @@ import { motion as motionBase, AnimatePresence } from "framer-motion"
 import { CheckCircle2, XCircle, Trophy, Clock, TrendingUp, Award, BookOpen, ChevronRight } from "lucide-react"
 
 const motion = motionBase as any
-import { cn } from "@/lib/utils"
+import { cn, clampRedactionText, getWordCount, getLineCount, MAX_REDACTION_LINES, MAX_REDACTION_WORDS } from "@/lib/utils"
 
 interface ExamQuestion {
   _id: string
@@ -56,59 +56,66 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
   const [showingResults, setShowingResults] = useState(false)
 
   useEffect(() => {
-    loadQuestions()
-  }, [])
+    const loadQuestions = async () => {
+      try {
+        setIsLoading(true)
+        setQuestions([])
+        setCurrentQuestionIndex(0)
+        setUserAnswers([])
+        setSelectedOption(null)
+        setOpenAnswer("")
 
-  const loadQuestions = async () => {
-    try {
-      const params = new URLSearchParams({
-        subject: config.subject,
-        difficulty: config.difficulty,
-        count: config.count.toString(),
-      })
-      if (config.topic) params.set('topic', config.topic)
-      
-      const response = await fetch(`/api/exam/questions?${params}`)
-      if (response.ok) {
-        const data = await response.json()
-        setQuestions(data.questions || data)
+        const params = new URLSearchParams({
+          subject: config.subject,
+          difficulty: config.difficulty,
+          count: config.count.toString(),
+        })
+        if (config.topic) params.set('topic', config.topic)
+        
+        const response = await fetch(`/api/exam/questions?${params}`)
+        if (response.ok) {
+          const data = await response.json()
+          setQuestions(data.questions || data)
+        }
+      } catch (error) {
+        console.error("Error cargando preguntas:", error)
+      } finally {
+        setIsLoading(false)
       }
-    } catch (error) {
-      console.error("Error cargando preguntas:", error)
-    } finally {
-      setIsLoading(false)
     }
-  }
+
+    loadQuestions()
+  }, [config])
 
   const handleOptionSelect = (optionIndex: number) => {
     if (selectedOption !== null) return // Ya seleccionó una respuesta
-    
-    setSelectedOption(optionIndex)
+
     const newAnswers = [...userAnswers, optionIndex]
+    setSelectedOption(optionIndex)
     setUserAnswers(newAnswers)
-    // Esperar 1 segundo antes de avanzar
+
     setTimeout(() => {
       if (currentQuestionIndex < questions.length - 1) {
-        setCurrentQuestionIndex(currentQuestionIndex + 1)
+        setCurrentQuestionIndex((prevIndex) => prevIndex + 1)
         setSelectedOption(null)
+        setOpenAnswer("")
         setQuestionStartTime(Date.now())
       } else {
-        // Examen completado
         finishExam(newAnswers)
       }
     }, 1500)
   }
 
   const handleOpenSubmit = (text: string) => {
-    if (selectedOption !== null) return
-    // Guardar la respuesta abierta como texto
-    setSelectedOption(0)
+    if (selectedOption !== null || !text.trim()) return
+
     const newAnswers = [...userAnswers, text]
+    setSelectedOption(0)
     setUserAnswers(newAnswers)
 
     setTimeout(() => {
       if (currentQuestionIndex < questions.length - 1) {
-        setCurrentQuestionIndex(currentQuestionIndex + 1)
+        setCurrentQuestionIndex((prevIndex) => prevIndex + 1)
         setSelectedOption(null)
         setOpenAnswer("")
         setQuestionStartTime(Date.now())
@@ -260,18 +267,24 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
                     <div className="space-y-3">
                       <textarea
                         value={openAnswer}
-                        onChange={(e) => setOpenAnswer(e.target.value)}
+                        onChange={(e) => setOpenAnswer(clampRedactionText(e.target.value, MAX_REDACTION_WORDS, MAX_REDACTION_LINES))}
                         placeholder="Escribe tu respuesta aquí..."
+                        rows={8}
                         className="w-full min-h-[120px] p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                       />
-                      <div className="flex justify-end">
-                        <button
-                          onClick={() => handleOpenSubmit(openAnswer)}
-                          disabled={!openAnswer.trim()}
-                          className="px-6 py-2 rounded-lg bg-purple-600 text-white disabled:opacity-50"
-                        >
-                          Enviar respuesta
-                        </button>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                          {openAnswerWordCount}/{MAX_REDACTION_WORDS} palabras · {openAnswerLineCount}/{MAX_REDACTION_LINES} líneas
+                        </p>
+                        <div className="flex justify-end">
+                          <button
+                            onClick={() => handleOpenSubmit(openAnswer)}
+                            disabled={!isOpenAnswerValid}
+                            className="px-6 py-2 rounded-lg bg-purple-600 text-white disabled:opacity-50"
+                          >
+                            Enviar respuesta
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (

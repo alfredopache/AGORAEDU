@@ -18,48 +18,53 @@ export default function BlogListClient({ entries }: { entries: BlogPost[] }) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
 
   const normalizeTag = (tag: string) => tag.replace(/^#/, '').trim().toLowerCase()
-  const formatCategoryLabel = (category: string) =>
-    category === 'all'
-      ? 'Todas'
-      : category
-          .split(/[-\s]+/)
-          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ')
+
+  const categoryIdFromTag = (tag: string) => {
+    const normalized = normalizeTag(tag)
+
+    if (['educacion', 'educación'].includes(normalized)) return 'educacion'
+    if (['salud y bienestar', 'salud', 'bienestar'].includes(normalized)) return 'salud-y-bienestar'
+    if (['tecnologia', 'tecnología', 'tecnologIA'.toLowerCase()].includes(normalized)) return 'tecnologia'
+
+    return null
+  }
 
   const filterCategories = [
-    'all',
-    ...Array.from(
-      new Set(
-        entries
-          .flatMap((entry) => entry.tags ?? [])
-          .map(normalizeTag)
-          .filter(Boolean)
-      )
-    ),
+    { id: 'all', label: 'Todas' },
+    { id: 'educacion', label: 'Educación' },
+    { id: 'salud-y-bienestar', label: 'Salud y bienestar' },
+    { id: 'tecnologia', label: 'Tecnología' },
   ]
 
-  const filteredEntries = selectedCategory === 'all'
-    ? entries
-    : entries.filter((entry) => {
-      if (!entry.tags || entry.tags.length === 0) return false
-      return entry.tags.some((tag) => normalizeTag(tag) === selectedCategory)
-    })
+  const filteredEntries = entries.filter((entry) => {
+    if (!entry.tags || entry.tags.length === 0) return false
+
+    const entryCategoryIds = Array.from(
+      new Set(entry.tags.map(categoryIdFromTag).filter(Boolean))
+    )
+
+    if (selectedCategory === 'all') {
+      return entryCategoryIds.length > 0
+    }
+
+    return entryCategoryIds.includes(selectedCategory)
+  })
 
   return (
     <div className="max-w-5xl mx-auto">
       <div className="mb-8 flex flex-wrap gap-3">
         {filterCategories.map((category) => (
           <button
-            key={category}
-            onClick={() => setSelectedCategory(category)}
+            key={category.id}
+            onClick={() => setSelectedCategory(category.id)}
             className={cn(
               'rounded-full border px-4 py-2 text-sm font-semibold transition-all',
-              selectedCategory === category
+              selectedCategory === category.id
                 ? 'bg-blue-600 text-white border-blue-600'
                 : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-800'
             )}
           >
-            {formatCategoryLabel(category)}
+            {category.label}
           </button>
         ))}
       </div>
@@ -117,11 +122,15 @@ export default function BlogListClient({ entries }: { entries: BlogPost[] }) {
 
                     <div className="mt-5 flex items-center justify-between">
                       <div className="flex flex-wrap gap-2">
-                        {entry.tags?.slice(0, 2).map((tag) => (
-                          <span key={tag} className="rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2.5 py-1 text-[10px] text-slate-500 dark:text-white/70 uppercase font-bold tracking-wider">
-                            #{tag}
-                          </span>
-                        ))}
+                        {entry.tags
+                          ?.map((tag) => ({ tag, categoryId: categoryIdFromTag(tag) }))
+                          .filter((item) => item.categoryId)
+                          .slice(0, 2)
+                          .map((item) => (
+                            <span key={item.tag} className="rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2.5 py-1 text-[10px] text-slate-500 dark:text-white/70 uppercase font-bold tracking-wider">
+                              #{item.tag}
+                            </span>
+                          ))}
                       </div>
                       <ArrowRight className="h-5 w-5 text-blue-600 dark:text-blue-400 transform transition-transform group-hover:translate-x-2" />
                     </div>

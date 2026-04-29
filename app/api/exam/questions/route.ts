@@ -81,6 +81,17 @@ export async function GET(request: NextRequest) {
       return val.startsWith('s') || val === 'true' || val === '1'
     }
 
+    function normalizeText(text?: string) {
+      if (!text) return ''
+      return text
+        .toString()
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase()
+    }
+
     function shuffleArray<T>(array: T[]) {
       const copy = [...array]
       for (let i = copy.length - 1; i > 0; i--) {
@@ -135,9 +146,11 @@ export async function GET(request: NextRequest) {
     // Eliminar preguntas duplicadas basadas en el texto, materia, dificultad y opciones
     const uniqueQuestions = new Map<string, any>()
     const normalizedUnique = normalized.filter((q: any) => {
-      const questionText = q.question?.toString().trim().replace(/\s+/g, ' ').toLowerCase() || ''
-      const optionsText = Array.isArray(q.options) ? q.options.map((o) => o.text.trim().toLowerCase()).join('|') : ''
-      const dedupeKey = `${questionText}|${q.subject}|${q.difficulty}|${optionsText}`
+      const questionText = normalizeText(q.question)
+      const optionsText = Array.isArray(q.options)
+        ? q.options.map((o) => normalizeText(o.text)).join('|')
+        : ''
+      const dedupeKey = `${questionText}|${normalizeText(q.subject)}|${normalizeText(q.difficulty)}|${optionsText}`
       if (uniqueQuestions.has(dedupeKey)) return false
       uniqueQuestions.set(dedupeKey, true)
       return true
@@ -167,18 +180,43 @@ export async function GET(request: NextRequest) {
           subjParam = parts[0]
           topicParam = parts.slice(1).join(':')
         }
-        candidates = candidates.filter((q: any) => q.subject === subjParam)
+
+        const subjectCandidates = candidates.filter((q: any) => q.subject === subjParam)
         if (topicParam) {
-          const t = topicParam.toLowerCase()
-          candidates = candidates.filter((q: any) => (q.topic || '').toLowerCase().includes(t))
+          const topicNormalized = normalizeText(topicParam)
+          const topicCandidates = subjectCandidates.filter((q: any) => {
+            const topicMatch = normalizeText(q.topic || q.original?.Tema || q.original?.SUBTEMA || q.original?.topic)
+            const questionMatch = normalizeText(q.question)
+            const sourceMatch = normalizeText(q.source?.name)
+            return (
+              topicMatch.includes(topicNormalized) ||
+              questionMatch.includes(topicNormalized) ||
+              sourceMatch.includes(topicNormalized)
+            )
+          })
+          candidates = topicCandidates.length > 0 ? topicCandidates : subjectCandidates
+        } else {
+          candidates = subjectCandidates
         }
       }
     }
 
     // Si se proporciona un parámetro topic separado, aplicarlo también
     if (topic) {
-      const t = topic.toLowerCase()
-      candidates = candidates.filter((q: any) => (q.topic || '').toLowerCase().includes(t))
+      const topicNormalized = normalizeText(topic)
+      const topicCandidates = candidates.filter((q: any) => {
+        const topicMatch = normalizeText(q.topic || q.original?.Tema || q.original?.SUBTEMA || q.original?.topic)
+        const questionMatch = normalizeText(q.question)
+        const sourceMatch = normalizeText(q.source?.name)
+        return (
+          topicMatch.includes(topicNormalized) ||
+          questionMatch.includes(topicNormalized) ||
+          sourceMatch.includes(topicNormalized)
+        )
+      })
+      if (topicCandidates.length > 0) {
+        candidates = topicCandidates
+      }
     }
 
     // Mezclar y recortar a 'count' sin repetir preguntas
