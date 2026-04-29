@@ -219,8 +219,48 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Mezclar y recortar a 'count' sin repetir preguntas
-    const final = shuffleArray(candidates).slice(0, Math.min(count, candidates.length))
+    // Mezclar y seleccionar preguntas evitando repeticiones semánticas
+    // Seleccionamos hasta 'count' preguntas intentando evitar enunciados demasiado similares
+    const needed = Math.min(count, candidates.length)
+    const shuffled = shuffleArray(candidates)
+
+    function tokensFromText(text: string) {
+      return new Set((normalizeText(text) || '').split(/\s+/).filter(Boolean))
+    }
+
+    function jaccard(a: Set<string>, b: Set<string>) {
+      let inter = 0
+      for (const t of a) if (b.has(t)) inter++
+      const union = new Set([...a, ...b]).size
+      return union === 0 ? 0 : inter / union
+    }
+
+    const selected: any[] = []
+    const SIMILARITY_THRESHOLD = 0.6 // ajustar si hace falta (0..1)
+
+    for (const q of shuffled) {
+      if (selected.length >= needed) break
+      const qTokens = tokensFromText(q.question || '')
+      let tooSimilar = false
+      for (const s of selected) {
+        const sTokens = tokensFromText(s.question || '')
+        if (jaccard(qTokens, sTokens) >= SIMILARITY_THRESHOLD) {
+          tooSimilar = true
+          break
+        }
+      }
+      if (!tooSimilar) selected.push(q)
+    }
+
+    // Si por la deduplicación no llegamos al número requerido, rellenamos con los restantes (fallback)
+    if (selected.length < needed) {
+      for (const q of shuffled) {
+        if (selected.length >= needed) break
+        if (!selected.find((s) => s._id === q._id)) selected.push(q)
+      }
+    }
+
+    const final = selected.slice(0, needed)
 
     return NextResponse.json({ questions: final })
   } catch (error) {
