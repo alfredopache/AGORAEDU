@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       return cleaned
     }
 
-    function parseCorrectIndex(resp?: string, options: string[]) {
+    function parseCorrectIndex(resp: string | undefined, options: string[]) {
       if (!resp) return -1
       const r = resp.toString().trim()
       const letter = r.match(/^['"]?([A-Z])[\)\.]?/i)
@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
     const normalizedUnique = normalized.filter((q: any) => {
       const questionText = normalizeText(q.question)
       const optionsText = Array.isArray(q.options)
-        ? q.options.map((o) => normalizeText(o.text)).join('|')
+        ? q.options.map((o: any) => normalizeText(o.text)).join('|')
         : ''
       const dedupeKey = `${questionText}|${normalizeText(q.subject)}|${normalizeText(q.difficulty)}|${optionsText}`
       if (uniqueQuestions.has(dedupeKey)) return false
@@ -222,7 +222,7 @@ export async function GET(request: NextRequest) {
     // Mezclar y seleccionar preguntas evitando repeticiones semánticas
     // Seleccionamos hasta 'count' preguntas intentando evitar enunciados demasiado similares
     const needed = Math.min(count, candidates.length)
-    const shuffled = shuffleArray(candidates)
+    const shuffled = shuffleArray<any>(candidates as any)
 
     function tokensFromText(text: string) {
       return new Set((normalizeText(text) || '').split(/\s+/).filter(Boolean))

@@ -52,6 +52,12 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
     const [openAnswer, setOpenAnswer] = useState<string>("")
   const [startTime] = useState(Date.now())
+  const openAnswerWordCount = getWordCount(openAnswer)
+  const openAnswerLineCount = getLineCount(openAnswer)
+  const isOpenAnswerValid =
+    openAnswer.trim().length > 0 &&
+    openAnswerWordCount <= MAX_REDACTION_WORDS &&
+    openAnswerLineCount <= MAX_REDACTION_LINES
   const [questionStartTime, setQuestionStartTime] = useState(Date.now())
   const [showingResults, setShowingResults] = useState(false)
 
@@ -575,8 +581,8 @@ export function ExamResultsView({ results, onNewExam, onBackToChat }: ExamResult
             {results.questions.map((question, index) => {
               const userAnswer = results.userAnswers[index]
               const hasOptions = Array.isArray(question.options) && question.options.length > 0
-              const correctIndex = hasOptions ? question.options.findIndex(opt => opt.isCorrect) : -1
-              const isCorrect = hasOptions && typeof userAnswer === 'number' ? question.options[userAnswer]?.isCorrect : false
+              const correctIndex = hasOptions ? question.options!.findIndex(opt => opt.isCorrect) : -1
+              const isCorrect = hasOptions && typeof userAnswer === 'number' ? question.options![userAnswer]?.isCorrect : false
 
               return (
                 <div
@@ -604,7 +610,7 @@ export function ExamResultsView({ results, onNewExam, onBackToChat }: ExamResult
                       
                       <div className="space-y-2 mb-3">
                         {hasOptions ? (
-                          question.options.map((option, optIndex) => (
+                          question.options!.map((option, optIndex) => (
                             <div
                               key={optIndex}
                               className={cn(

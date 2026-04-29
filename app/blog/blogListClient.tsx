@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'
 
 export default function BlogListClient({ entries }: { entries: BlogPost[] }) {
   const router = useRouter()
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'educacion' | 'salud-y-bienestar' | 'tecnologia'>('all')
 
   const normalizeTag = (tag: string) => tag.replace(/^#/, '').trim().toLowerCase()
 
@@ -29,7 +29,7 @@ export default function BlogListClient({ entries }: { entries: BlogPost[] }) {
     return null
   }
 
-  const filterCategories = [
+  const filterCategories: { id: 'all' | 'educacion' | 'salud-y-bienestar' | 'tecnologia'; label: string }[] = [
     { id: 'all', label: 'Todas' },
     { id: 'educacion', label: 'Educación' },
     { id: 'salud-y-bienestar', label: 'Salud y bienestar' },

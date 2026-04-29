@@ -40,7 +40,7 @@ function parseClosedOptions(raw?: string) {
   return cleaned
 }
 
-function parseCorrectIndex(resp?: string, options: string[]) {
+function parseCorrectIndex(resp: string | undefined, options: string[]) {
   if (!resp) return -1
   const r = resp.toString().trim()
   // Try letter A/B/C
