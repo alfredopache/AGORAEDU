@@ -5,7 +5,7 @@ import { motion as motionBase, AnimatePresence } from "framer-motion"
 import { CheckCircle2, XCircle, Trophy, Clock, TrendingUp, Award, BookOpen, ChevronRight } from "lucide-react"
 
 const motion = motionBase as any
-import { cn, clampRedactionText, getWordCount, getLineCount, MAX_REDACTION_LINES, MAX_REDACTION_WORDS } from "@/lib/utils"
+import { cn, clampRedactionText, getWordCount, getLineCount, MAX_REDACTION_LINES, MAX_REDACTION_WORDS, formatExamSource } from "@/lib/utils"
 
 interface ExamQuestion {
   _id: string;
@@ -314,14 +314,19 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
                     <h3 className="text-xl font-semibold text-slate-900 dark:text-white leading-relaxed">
                       {currentQuestion.question}
                     </h3>
-                    {currentQuestion.source && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                        <strong>Fuente:</strong> {currentQuestion.source.name}{currentQuestion.source.year ? ` — ${currentQuestion.source.year}` : ''}
-                        {currentQuestion.source.url && (
-                          <> · <a href={currentQuestion.source.url} target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 hover:underline">ver documento</a></>
-                        )}
-                      </p>
-                    )}
+                    {currentQuestion.source && (() => {
+                      const srcInfo = formatExamSource(currentQuestion.source)
+                      return (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                          <strong>Fuente:</strong>{' '}
+                          {srcInfo.url ? (
+                            <a href={srcInfo.url} target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 hover:underline">{srcInfo.label}</a>
+                          ) : (
+                            <>{srcInfo.label}</>
+                          )}
+                        </p>
+                      )
+                    })()}
                     {currentQuestion.textReference && (
                       <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                         <strong>Referencia:</strong>
@@ -427,17 +432,27 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
                 )}
                 </div>
 
-                {/* Fuente */}
-                {currentQuestion.source && (
-                  <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
-                    <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                      <Trophy className="w-4 h-4" />
-                      <span>
-                        <strong>Fuente:</strong> {currentQuestion.source.name} - {currentQuestion.source.region} ({currentQuestion.source.year})
-                      </span>
-                    </p>
-                  </div>
-                )}
+                {/* Fuente (detalle) */}
+                {currentQuestion.source && (() => {
+                  const srcInfo = formatExamSource(currentQuestion.source)
+                  return (
+                    <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                        <Trophy className="w-4 h-4" />
+                        <span>
+                          <strong>Fuente:</strong>{' '}
+                          {srcInfo.url ? (
+                            <a href={srcInfo.url} target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 hover:underline">{srcInfo.label}</a>
+                          ) : (
+                            <>{srcInfo.label}</>
+                          )}
+                          {currentQuestion.source.region ? ` · ${currentQuestion.source.region}` : ''}
+                          {currentQuestion.source.year ? ` (${currentQuestion.source.year})` : ''}
+                        </span>
+                      </p>
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* Mensaje de transición */}

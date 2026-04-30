@@ -120,6 +120,19 @@ export async function GET(request: NextRequest) {
 
     const items = json.dataset_preguntas || json.dataset || json.items || []
 
+    // Mapa de PDFs oficiales (València · Grado Medio) — usado como fallback si no hay URL en el item
+    const VALENCIA_GM_PDFS: Record<string, string> = {
+      '2017': 'https://ceice.gva.es/documents/388109149/391038839/GM_2017.pdf',
+      '2018': 'https://ceice.gva.es/documents/388109149/391038839/GM_2018.pdf',
+      '2019': 'https://ceice.gva.es/documents/388109149/391038839/GM_2019.pdf',
+      '2020': 'https://ceice.gva.es/documents/388109149/391038839/GM_2020.pdf',
+      '2021': 'https://ceice.gva.es/documents/388109149/391038839/GM_2021.pdf',
+      '2022': 'https://ceice.gva.es/documents/388109149/391038839/GM_2022.pdf',
+      '2023': 'https://ceice.gva.es/documents/388109149/391038839/GM_2023.pdf',
+      '2024': 'https://ceice.gva.es/documents/388109149/391038839/GM_2024.pdf',
+      '2025': 'https://ceice.gva.es/documents/388109149/0/JUNTOS+GM+2025.pdf/eaff2543-5199-f592-6af1-aa689a78ea67',
+    }
+
     // Normalizar preguntas
     const normalized = items.map((item: any) => {
       const idUnico = item.ID_Unico || (item.ID ? `ID-${item.ID}` : undefined)
@@ -128,6 +141,22 @@ export async function GET(request: NextRequest) {
       const correctIndex = parseCorrectIndex(item.RESPUESTA_CORRECTA || item.RESPUESTA_MODELO || item.RESPUESTA_MODELO_EXCELENTE || item.RESPUESTA || '', optionsText)
 
       const options = optionsText.length > 0 ? optionsText.map((t: string, i: number) => ({ text: t, isCorrect: i === correctIndex })) : undefined
+      
+      const textReference = (item.TEXTO_REFERENCIA || item.texto_referencia || item.textReference || '')
+      const reqImages: string[] = []
+      if (textReference && typeof textReference === 'string') {
+        const matches = Array.from(textReference.matchAll(/\[REQ_IMAGE:\s*([^\]]+)\]/ig)).map(m => m[1])
+        for (const m of matches) reqImages.push(m)
+      }
+
+      const srcName = item.FUENTE || item.FUENTE_TEXTO || item.Fuente || 'Desconocida'
+      const srcYear = item.Año || item.ANIO || item.year || null
+      let srcUrl = item.FUENTE_URL || item.FUENTE_LINK || item.URL || item.link || item.PDF_URL || null
+      // fallback: si la fuente es REAL_PDF y tenemos un año conocido, enlazar al PDF oficial de València
+      if (!srcUrl && String(srcName).toUpperCase().includes('REAL_PDF') && srcYear) {
+        const y = String(srcYear)
+        if (VALENCIA_GM_PDFS[y]) srcUrl = VALENCIA_GM_PDFS[y]
+      }
 
       return {
         _id,
@@ -137,9 +166,11 @@ export async function GET(request: NextRequest) {
         difficulty: mapDifficulty(item.Dificultad || item.DIFICULTAD || item.Nivel || item.NIVEL || ''),
         options,
         explanation: [item.Explicación, item.RUBRICA_MODELO, item.RESPUESTA_MODELO_EXCELENTE, item.Explicacion].filter(Boolean).join('\n\n'),
-        source: { name: item.FUENTE || item.FUENTE_TEXTO || item.Fuente || 'Desconocida', year: item.Año || item.ANIO || item.year || null, region: item.FUENTE_TEXTO || 'Nacional' },
+        source: { name: srcName, year: srcYear || null, region: item.Region || item.REGION || item.Comunidad || item.COMUNIDAD || 'Nacional', url: srcUrl || null },
         original: item,
         isActive: isItemActive(item),
+        textReference,
+        reqImages,
       }
     })
 

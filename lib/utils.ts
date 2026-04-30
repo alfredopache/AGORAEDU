@@ -44,3 +44,43 @@ export function clampRedactionText(text: string, maxWords: number, maxLines: num
   if (tokens.length <= maxWords) return joined
   return tokens.slice(0, maxWords).join(" ")
 }
+
+export function formatExamSource(src?: { name?: string | null; year?: string | number | null; url?: string | null }) {
+  if (!src) return { label: 'Desconocida', url: null }
+
+  const name = String(src.name || '').toUpperCase()
+  const year = src.year ? String(src.year) : null
+  const url = src.url || null
+
+  const VALENCIA_LABELS: Record<string, string> = {
+    '2017': 'GM 2017 — Prueba de Acceso (parte común)',
+    '2018': 'GM 2018 — Prueba de Acceso (parte común)',
+    '2019': 'GM 2019 — Prueba de Acceso (parte común)',
+    '2020': 'GM 2020 — Prueba de Acceso (parte común)',
+    '2021': 'GM 2021 — Prueba de Acceso (parte común)',
+    '2022': 'GM 2022 — Prueba de Acceso (parte común)',
+    '2023': 'GM 2023 — Prueba de Acceso (parte común)',
+    '2024': 'GM 2024 — Prueba de Acceso (parte común)',
+    '2025': 'JUNTOS GM 2025 — Documentación / partes (GM 2025)',
+  }
+
+  // Si la fuente indica REAL_PDF y tenemos año, preferimos la etiqueta oficial
+  if (name.includes('REAL_PDF') && year) {
+    const label = VALENCIA_LABELS[year] || `REAL_PDF — ${year}`
+    return { label, url }
+  }
+
+  // Si el URL contiene un patrón conocido de GM_xxxx.pdf, extraer año
+  if (url) {
+    const m = url.match(/GM[_-]?(\d{4})/i)
+    if (m && m[1]) {
+      const y = m[1]
+      const label = VALENCIA_LABELS[y] || `GM ${y} — Prueba de Acceso`
+      return { label, url }
+    }
+  }
+
+  // Fallback: mostrar nombre y año si existen
+  const fallbackLabel = src.name ? `${src.name}${year ? ` — ${year}` : ''}` : `Fuente ${year || ''}`
+  return { label: fallbackLabel, url }
+}

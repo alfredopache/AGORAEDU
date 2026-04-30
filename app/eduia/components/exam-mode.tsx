@@ -17,7 +17,7 @@ import {
   GraduationCap,
   Lightbulb
 } from "lucide-react"
-import { cn, clampRedactionText, getWordCount, getLineCount, MAX_REDACTION_LINES, MAX_REDACTION_WORDS } from "@/lib/utils"
+import { cn, clampRedactionText, getWordCount, getLineCount, MAX_REDACTION_LINES, MAX_REDACTION_WORDS, formatExamSource } from "@/lib/utils"
 
 const motion = motionBase as any
 
@@ -624,12 +624,15 @@ export function ExamMode({ sessionId }: ExamModeProps) {
                      currentQuestion.difficulty === "intermedio" ? "⭐⭐ Intermedio" : 
                      "⭐⭐⭐ Avanzado"}
                   </span>
-                  {currentQuestion.source && (
-                    <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold flex items-center gap-1">
-                      <Award className="w-3 h-3" />
-                      Certificada {currentQuestion.source.year}
-                    </span>
-                  )}
+                  {currentQuestion.source && (() => {
+                    const srcInfo = formatExamSource(currentQuestion.source)
+                    return (
+                      <a href={srcInfo.url || '#'} target="_blank" rel="noreferrer" className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold flex items-center gap-1 hover:underline">
+                        <Award className="w-3 h-3" />
+                        {srcInfo.label}
+                      </a>
+                    )
+                  })()}
                 </div>
 
                 {/* Question */}
@@ -654,14 +657,19 @@ export function ExamMode({ sessionId }: ExamModeProps) {
                     </div>
                   )}
 
-                  {currentQuestion.source && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-                      <strong>Fuente:</strong> {currentQuestion.source.name}{currentQuestion.source.year ? ` — ${currentQuestion.source.year}` : ''}
-                      {currentQuestion.source.url && (
-                        <> · <a href={currentQuestion.source.url} target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 hover:underline">ver documento</a></>
-                      )}
-                    </p>
-                  )}
+                  {currentQuestion.source && (() => {
+                    const srcInfo = formatExamSource(currentQuestion.source)
+                    return (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                        <strong>Fuente:</strong>{' '}
+                        {srcInfo.url ? (
+                          <a href={srcInfo.url} target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 hover:underline">{srcInfo.label}</a>
+                        ) : (
+                          <>{srcInfo.label}</>
+                        )}
+                      </p>
+                    )
+                  })()}
 
                   {/* Options */}
                   <div className="space-y-3">
@@ -712,31 +720,23 @@ export function ExamMode({ sessionId }: ExamModeProps) {
                 </div>
 
                 {/* Source Info */}
-                {currentQuestion.source && (
-                  <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-500/20 rounded-xl p-4">
-                    <div className="flex items-start gap-2">
-                      <Award className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                      <div className="text-sm">
-                        <p className="font-semibold text-green-900 dark:text-green-300 mb-1">
-                          Fuente Certificada
-                        </p>
-                        <p className="text-green-700 dark:text-green-400">
-                          {currentQuestion.source.name} - {currentQuestion.source.region} ({currentQuestion.source.year})
-                        </p>
-                        {currentQuestion.source.url && (
-                          <a
-                            href={currentQuestion.source.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-green-600 dark:text-green-400 hover:underline text-xs mt-1 inline-block"
-                          >
-                            Ver fuente original →
-                          </a>
-                        )}
+                {currentQuestion.source && (() => {
+                  const srcInfo = formatExamSource(currentQuestion.source)
+                  return (
+                    <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-500/20 rounded-xl p-4">
+                      <div className="flex items-start gap-2">
+                        <Award className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                        <div className="text-sm">
+                          <p className="font-semibold text-green-900 dark:text-green-300 mb-1">Fuente Certificada</p>
+                          <p className="text-green-700 dark:text-green-400">{srcInfo.label}{currentQuestion.source.region ? ` · ${currentQuestion.source.region}` : ''}{currentQuestion.source.year ? ` (${currentQuestion.source.year})` : ''}</p>
+                          {srcInfo.url && (
+                            <a href={srcInfo.url} target="_blank" rel="noopener noreferrer" className="text-green-600 dark:text-green-400 hover:underline text-xs mt-1 inline-block">Ver fuente original →</a>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )
+                })()}
               </motion.div>
             </AnimatePresence>
           </div>

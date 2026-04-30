@@ -410,35 +410,7 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved, onDel
         <>
           {/* Área de Mensajes */}
             <div className="flex-1 min-h-0 p-6 space-y-4">
-            <div className="max-w-4xl mx-auto">
-              <div className="mb-6 rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 p-4">
-                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-3">
-                  Selecciona un ámbito para Acceso IA:
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {SCOPE_OPTIONS.map((scope) => (
-                    <button
-                      key={scope.value}
-                      onClick={() => setSelectedScope(scope.value)}
-                      className={cn(
-                        "rounded-2xl p-4 text-left border transition-all pointer-events-auto",
-                        selectedScope === scope.value
-                          ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-lg"
-                          : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-purple-300 dark:hover:border-purple-600"
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{scope.emoji}</span>
-                        <div>
-                          <p className="font-semibold text-slate-900 dark:text-white">{scope.label}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">{scope.description}</p>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            {/* (Ámbitos moved below welcome when chat is empty) */}
             {conversationId && onDeleteConversation && (
               <div className="max-w-4xl mx-auto flex justify-end">
                 <button
@@ -460,6 +432,35 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved, onDel
                     Tu tutor personal para preparar la prueba de acceso a Grado Medio.
                     Elige un ámbito y pregúntame dentro de él: lingüístico-social o científico-matemático.
                   </p>
+                </div>
+
+                {/* Selección de ámbito (movido debajo del panel de bienvenida) */}
+                <div className="max-w-4xl mx-auto mb-6">
+                  <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/50 p-4">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-3">Selecciona un ámbito para Acceso IA:</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {SCOPE_OPTIONS.map((scope) => (
+                        <button
+                          key={scope.value}
+                          onClick={() => setSelectedScope(scope.value)}
+                          className={cn(
+                            "rounded-2xl p-4 text-left border transition-all pointer-events-auto",
+                            selectedScope === scope.value
+                              ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-lg"
+                              : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-purple-300 dark:hover:border-purple-600"
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">{scope.emoji}</span>
+                            <div>
+                              <p className="font-semibold text-slate-900 dark:text-white">{scope.label}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">{scope.description}</p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Acciones Rápidas */}
