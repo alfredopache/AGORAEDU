@@ -204,7 +204,7 @@ export function EduIAMainLayout() {
                   )}
                 >
                   <GraduationCap className="w-4 h-4" />
-                  <span className="hidden sm:inline">Examen</span>
+                  <span className="hidden sm:inline">Simulacro</span>
                 </button>
               </div>
             </div>

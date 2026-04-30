@@ -8,40 +8,44 @@ const motion = motionBase as any
 import { cn, clampRedactionText, getWordCount, getLineCount, MAX_REDACTION_LINES, MAX_REDACTION_WORDS } from "@/lib/utils"
 
 interface ExamQuestion {
-  _id: string
-  question: string
-  subject: string
-  topic: string
-  difficulty: "basico" | "intermedio" | "avanzado"
-    options?: Array<{
-      text: string
-      isCorrect: boolean
-    }>
-  explanation: string
+  _id: string;
+  question: string;
+  subject: string;
+  topic: string;
+  difficulty: "basico" | "intermedio" | "avanzado";
+  options?: Array<{
+    text: string;
+    isCorrect: boolean;
+  }>;
+  explanation: string;
   source: {
-    name: string
-    year: string
-    region: string
-  }
+    name: string;
+    year?: string | number | null;
+    region?: string;
+    url?: string | null;
+  };
+  textReference?: string;
+  reqImages?: string[];
 }
 
 interface InteractiveExamProps {
   config: {
-    subject: string
-    difficulty: string
-    count: number
-    topic?: string
-  }
-  onComplete: (results: ExamResults) => void
-  onCancel: () => void
+    subject: string;
+    difficulty: string;
+    count: number;
+    topic?: string;
+    timePerQuestion?: number;
+  };
+  onComplete: (results: ExamResults) => void;
+  onCancel: () => void;
 }
 
 interface ExamResults {
-  questions: ExamQuestion[]
-  userAnswers: Array<number | string>
-  score: number
-  timeSpent: number
-  totalTime: number
+  questions: ExamQuestion[];
+  userAnswers: Array<number | string>;
+  score: number;
+  timeSpent: number;
+  totalTime: number;
 }
 
 export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExamProps) {
@@ -52,6 +56,7 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
     const [openAnswer, setOpenAnswer] = useState<string>("")
   const [startTime] = useState(Date.now())
+  const [timeLeft, setTimeLeft] = useState<number>(config.timePerQuestion || 60)
   const openAnswerWordCount = getWordCount(openAnswer)
   const openAnswerLineCount = getLineCount(openAnswer)
   const isOpenAnswerValid =
@@ -80,8 +85,12 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
         
         const response = await fetch(`/api/exam/questions?${params}`)
         if (response.ok) {
-          const data = await response.json()
-          setQuestions(data.questions || data)
+            const data = await response.json()
+            const loaded = data.questions || data
+            setQuestions(loaded)
+            // inicializar tiempo por pregunta
+            setTimeLeft(config.timePerQuestion || 60)
+            setQuestionStartTime(Date.now())
         }
       } catch (error) {
         console.error("Error cargando preguntas:", error)
@@ -93,6 +102,32 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
     loadQuestions()
   }, [config])
 
+  // Temporizador por pregunta: decrementa y avanza si llega a 0
+  useEffect(() => {
+    if (questions.length === 0) return
+
+    // resetear contador para la pregunta actual
+    setTimeLeft(config.timePerQuestion || 60)
+    setQuestionStartTime(Date.now())
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval)
+          // Si todavía no se ha respondido, marcar timeout y avanzar
+          if (selectedOption === null) {
+            handleTimeout()
+          }
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentQuestionIndex, questions])
+
   const handleOptionSelect = (optionIndex: number) => {
     if (selectedOption !== null) return // Ya seleccionó una respuesta
 
@@ -100,16 +135,33 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
     setSelectedOption(optionIndex)
     setUserAnswers(newAnswers)
 
-    setTimeout(() => {
-      if (currentQuestionIndex < questions.length - 1) {
+    // Si estamos en la última pregunta, finalizar inmediatamente para evitar demoras
+    if (currentQuestionIndex < questions.length - 1) {
+      setTimeout(() => {
         setCurrentQuestionIndex((prevIndex) => prevIndex + 1)
         setSelectedOption(null)
         setOpenAnswer("")
         setQuestionStartTime(Date.now())
-      } else {
-        finishExam(newAnswers)
-      }
-    }, 1500)
+      }, 1500)
+    } else {
+      finishExam(newAnswers)
+    }
+  }
+
+  const handleTimeout = () => {
+    // Registrar como respuesta por tiempo agotado
+    const newAnswers = [...userAnswers, 'TIMEOUT']
+    setUserAnswers(newAnswers)
+
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex((prev) => prev + 1)
+      setSelectedOption(null)
+      setOpenAnswer("")
+      setQuestionStartTime(Date.now())
+      setTimeLeft(config.timePerQuestion || 60)
+    } else {
+      finishExam(newAnswers)
+    }
   }
 
   const handleOpenSubmit = (text: string) => {
@@ -119,16 +171,16 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
     setSelectedOption(0)
     setUserAnswers(newAnswers)
 
-    setTimeout(() => {
-      if (currentQuestionIndex < questions.length - 1) {
+    if (currentQuestionIndex < questions.length - 1) {
+      setTimeout(() => {
         setCurrentQuestionIndex((prevIndex) => prevIndex + 1)
         setSelectedOption(null)
         setOpenAnswer("")
         setQuestionStartTime(Date.now())
-      } else {
-        finishExam(newAnswers)
-      }
-    }, 1000)
+      }, 1000)
+    } else {
+      finishExam(newAnswers)
+    }
   }
 
   const finishExam = (answers: Array<number | string>) => {
@@ -163,7 +215,7 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
       <div className="flex items-center justify-center p-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-slate-600 dark:text-slate-400">Cargando preguntas del examen...</p>
+          <p className="text-slate-600 dark:text-slate-400">Cargando preguntas del simulacro...</p>
         </div>
       </div>
     )
@@ -199,13 +251,12 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-sm opacity-90">Pregunta {currentQuestionIndex + 1} de {questions.length}</p>
-              <p className="text-2xl font-bold">{config.subject === "mixto" ? "Examen Completo" : currentQuestion.subject}</p>
+              <p className="text-2xl font-bold">{config.subject === "mixto" ? "Simulacro completo" : currentQuestion.subject}</p>
             </div>
             <div className="text-right">
-              <p className="text-sm opacity-90">Tiempo</p>
+              <p className="text-sm opacity-90">Tiempo restante (pregunta)</p>
               <p className="text-xl font-bold">
-                {Math.floor((Date.now() - startTime) / 1000 / 60)}:
-                {String(Math.floor((Date.now() - startTime) / 1000) % 60).padStart(2, '0')}
+                {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
               </p>
             </div>
           </div>
@@ -263,13 +314,37 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
                     <h3 className="text-xl font-semibold text-slate-900 dark:text-white leading-relaxed">
                       {currentQuestion.question}
                     </h3>
+                    {currentQuestion.source && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                        <strong>Fuente:</strong> {currentQuestion.source.name}{currentQuestion.source.year ? ` — ${currentQuestion.source.year}` : ''}
+                        {currentQuestion.source.url && (
+                          <> · <a href={currentQuestion.source.url} target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 hover:underline">ver documento</a></>
+                        )}
+                      </p>
+                    )}
+                    {currentQuestion.textReference && (
+                      <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                        <strong>Referencia:</strong>
+                        <div className="mt-2">{currentQuestion.textReference}</div>
+                        {Array.isArray(currentQuestion.reqImages) && currentQuestion.reqImages.length > 0 && (
+                          <div className="mt-2 text-xs text-slate-600 dark:text-slate-400">
+                            <strong>Imágenes de apoyo:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              {currentQuestion.reqImages.map((img, i) => (
+                                <li key={i}>{img}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Opciones */}
                 <div className="space-y-3">
                   {(!currentQuestion.options || currentQuestion.options.length === 0) ? (
-                    // Pregunta abierta: mostrar textarea y botón
+                    /* Pregunta abierta: mostrar textarea y botón */
                     <div className="space-y-3">
                       <textarea
                         value={openAnswer}
@@ -454,7 +529,7 @@ export function ExamResultsView({ results, onNewExam, onBackToChat }: ExamResult
           <div className="text-center mb-6">
             <Trophy className="w-20 h-20 mx-auto mb-4 text-yellow-500" />
             <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-              ¡Examen Completado!
+              ¡Simulacro completado!
             </h2>
             <p className={cn("text-6xl font-black mb-2", getScoreColor(score))}>
               {score}%
@@ -466,6 +541,27 @@ export function ExamResultsView({ results, onNewExam, onBackToChat }: ExamResult
               {getScoreMessage(score)}
             </p>
           </div>
+
+          {/* Fuentes utilizadas en el simulacro */}
+          {results.questions && results.questions.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Fuentes del simulacro</h4>
+              <div className="flex flex-wrap gap-2">
+                {Array.from(
+                  new Map(
+                    results.questions
+                      .map((q) => q.source)
+                      .filter(Boolean)
+                      .map((s: any) => [`${s.name || 'Desconocida'}|${s.year || ''}`, s])
+                  ).values()
+                ).map((s: any, i) => (
+                  <div key={i} className="px-3 py-1 bg-slate-100 dark:bg-slate-700 rounded-full text-sm text-slate-700 dark:text-slate-200">
+                    {s.name}{s.year ? ` — ${s.year}` : ''}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Estadísticas */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
@@ -554,7 +650,7 @@ export function ExamResultsView({ results, onNewExam, onBackToChat }: ExamResult
               onClick={onNewExam}
               className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-4 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl"
             >
-              🔄 Hacer Otro Examen
+              🔄 Hacer otro simulacro
             </button>
             <button
               onClick={onBackToChat}
@@ -658,6 +754,94 @@ export function ExamResultsView({ results, onNewExam, onBackToChat }: ExamResult
               )
             })}
           </div>
+        </motion.div>
+        {/* Descargas oficiales (AccesoIA - Valencia, Grado Medio) */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="mt-6 bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-md border border-slate-200 dark:border-slate-700"
+        >
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">Descargas — AccesoIA (Valencia · Grado Medio)</h3>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">Enlaces oficiales y PDFs de pruebas de acceso. Si quieres que busque y añada todos los PDFs oficiales de Valencia, dímelo y los extraigo y agrego aquí.</p>
+          <ul className="space-y-2">
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2017.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2017 — Prueba de Acceso (parte común)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2017 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2018.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2018 — Prueba de Acceso (parte común)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2018 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2019.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2019 — Prueba de Acceso (parte común)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2019 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2020.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2020 — Prueba de Acceso (parte común)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2020 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2021.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2021 — Prueba de Acceso (parte común)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2021 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2022.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2022 — Prueba de Acceso (parte común)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2022 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2023.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2023 — Prueba de Acceso (parte común)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2023 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2024.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2024 — Prueba de Acceso (parte común)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2024 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/0/JUNTOS+GM+2025.pdf/eaff2543-5199-f592-6af1-aa689a78ea67" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">JUNTOS GM 2025 — Documentación / partes (GM 2025)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2025 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/392974777/OrientacionesGMGS_va.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Orientaciones Admisión GM/GS 2024-25 (valencià)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2024 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/392974777/OrientacionesGMGS_es.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Orientaciones Admisión GM/GS 2024-25 (español)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2024 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/392974777/Prioridades_GM.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Criterios de Prioridad en la Admisión - CFGM</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2024 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://portal.edu.gva.es/iesbenissa/wp-content/uploads/sites/309/2024/02/InformacioPAC_CFGM_24.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Informació PAC CFGM 2024 (IES Benissa)</a>
+              <div className="text-xs text-slate-500">portal.edu.gva.es · 2024 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://portal.edu.gva.es/ieslavalldigna/wp-content/uploads/sites/512/2024/02/Prova-acces-cicle-mitja.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Prova d'accés Cicle Mitjà 2024 (IES La Valldigna)</a>
+              <div className="text-xs text-slate-500">portal.edu.gva.es · 2024 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://portal.edu.gva.es/46020480/wp-content/uploads/sites/468/2025/03/Proves-dacces-FP-2025.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Proves d'accés FP 2025 — recopilación (Portal Educatiu)</a>
+              <div className="text-xs text-slate-500">portal.edu.gva.es · 2025 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://portal.edu.gva.es/iesalcasser/wp-content/uploads/sites/303/2025/02/PROVA-ACCES-GRAU-MITJA.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Prova Accés Grau Mitjà 2025 (IES Alcasser)</a>
+              <div className="text-xs text-slate-500">portal.edu.gva.es · 2025 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://portal.edu.gva.es/iesisabel-clarasimo/wp-content/uploads/sites/1636/2025/02/Proves-acces-CF2025.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Proves d'accés Cicles Formatius 2025 (IES Isabel Clara Simó)</a>
+              <div className="text-xs text-slate-500">portal.edu.gva.es · 2025 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://portal.edu.gva.es/iesabastos/wp-content/uploads/sites/617/2025/03/25PACFGM-v-Informacio-proves-dacces-de-grau-mitja.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Proves d'accés CFGM 2025 - Informació (IES Abastos)</a>
+              <div className="text-xs text-slate-500">portal.edu.gva.es · 2025 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://portal.edu.gva.es/46020480/wp-content/uploads/sites/468/2024/02/Proves-dacces-cicles.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Proves d'accés a Cicles — recopilación 2024</a>
+              <div className="text-xs text-slate-500">portal.edu.gva.es · 2024 · enlace no verificado</div>
+            </li>
+          </ul>
         </motion.div>
       </div>
     </div>

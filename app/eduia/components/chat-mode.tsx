@@ -44,7 +44,7 @@ const EXAMPLE_QUESTIONS = [
   { text: "Explícame las ecuaciones de segundo grado paso a paso", emoji: "🔢", subject: "matematicas" },
   { text: "¿Cuáles son las reglas de acentuación en español?", emoji: "📝", subject: "lengua" },
   { text: "¿Cómo se usa el Present Perfect en inglés?", emoji: "🌍", subject: "ingles" },
-  { text: "Hazme un examen de 10 preguntas de matemáticas", emoji: "📝", subject: "exam" },
+  { text: "Hazme un simulacro de 10 preguntas de matemáticas", emoji: "📝", subject: "exam" },
   { text: "Dame 10 ejercicios de fracciones con soluciones", emoji: "🔢", subject: "matematicas" },
   { text: "Quiero hacer una prueba de inglés de nivel intermedio", emoji: "🎯", subject: "exam" },
 ]
@@ -226,9 +226,12 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved, onDel
     // Limitar rango razonable
     count = Math.min(Math.max(Number(count) || defaultCount, 5), 30)
 
+    // Añadimos un tiempo por pregunta por defecto (segundos)
+    const defaultTimePerQuestion = 60
+
     return {
       isExam: true,
-      config: { subject, difficulty, count, topic },
+      config: { subject, difficulty, count, topic, timePerQuestion: defaultTimePerQuestion },
     }
   }
 
@@ -348,7 +351,7 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved, onDel
 
     const summaryMessage: Message = {
       role: "assistant",
-      content: `✅ **Examen completado!**\n\n**Puntuación:** ${results.score}% (${results.score >= 50 ? 'Aprobado' : 'No aprobado'})\n**Nota de Media:** ${((results.score / 100) * 10).toFixed(2)} / 10\n\nHas respondido correctamente ${correctCount} de ${gradedCount} preguntas autocorregibles (y ${results.questions.length - gradedCount} preguntas abiertas pendientes de corrección).\n\n¿Quieres repasar algún concepto específico?`,
+      content: `✅ **Simulacro completado!**\n\n**Puntuación:** ${results.score}% (${results.score >= 50 ? 'Aprobado' : 'No aprobado'})\n**Nota de Media:** ${((results.score / 100) * 10).toFixed(2)} / 10\n\nHas respondido correctamente ${correctCount} de ${gradedCount} preguntas autocorregibles (y ${results.questions.length - gradedCount} preguntas abiertas pendientes de corrección).\n\n¿Quieres repasar algún concepto específico?`,
       timestamp: new Date(),
     }
     

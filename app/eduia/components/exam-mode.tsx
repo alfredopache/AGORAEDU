@@ -38,6 +38,8 @@ interface ExamQuestion {
     region: string
     url?: string
   }
+  textReference?: string
+  reqImages?: string[]
 }
 
 interface UserAnswer {
@@ -73,8 +75,12 @@ const DIFFICULTY_OPTIONS = [
 export function ExamMode({ sessionId }: ExamModeProps) {
   const [examState, setExamState] = useState<ExamState>("setup")
   const [selectedSubject, setSelectedSubject] = useState<string>("")
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>("")
+  // Dificultad fija para simulacro de Grado Medio
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>("intermedio")
   const [questionCount, setQuestionCount] = useState<number>(10)
+  const [secondsPerQuestion, setSecondsPerQuestion] = useState<number>(60)
+  const [useSimulacroPreset, setUseSimulacroPreset] = useState<boolean>(false)
+  const [timeTotalMinutes, setTimeTotalMinutes] = useState<number>(60)
   
   const [questions, setQuestions] = useState<ExamQuestion[]>([])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
@@ -88,6 +94,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
     openAnswerLineCount <= MAX_REDACTION_LINES
   const [startTime, setStartTime] = useState<number>(0)
   const [questionStartTime, setQuestionStartTime] = useState<number>(0)
+  const [timeLeft, setTimeLeft] = useState<number>(secondsPerQuestion)
   const [totalTime, setTotalTime] = useState<number>(0)
   
   const [isLoading, setIsLoading] = useState(false)
@@ -101,10 +108,40 @@ export function ExamMode({ sessionId }: ExamModeProps) {
   }, [currentQuestionIndex, examState])
 
   const startExam = async () => {
-    if (!selectedSubject || !selectedDifficulty) return
+    if (!useSimulacroPreset && !selectedSubject) return
 
     setIsLoading(true)
     try {
+      if (useSimulacroPreset) {
+        // Llamar al endpoint que arma un simulacro completo por bloques
+        const params = new URLSearchParams({
+          difficulty: selectedDifficulty,
+          preset: 'gradoMedio',
+          timeTotal: String(timeTotalMinutes),
+          secondsPerQuestion: String(secondsPerQuestion),
+          seed: String(Math.floor(Math.random() * 1e9)),
+        })
+
+        const response = await fetch(`/api/exam/simulacro?${params.toString()}`)
+        if (!response.ok) throw new Error('Error obteniendo simulacro')
+        const data = await response.json()
+        if (!data || !data.simulacro || !Array.isArray(data.simulacro.questions) || data.simulacro.questions.length === 0) {
+          alert('No hay preguntas disponibles para el simulacro. Intenta cambiar la configuración.')
+          setIsLoading(false)
+          return
+        }
+
+        setQuestions(data.simulacro.questions)
+        // sincronizar segundos por pregunta si el servidor lo asignó
+        if (data.simulacro.secondsPerQuestion) setSecondsPerQuestion(data.simulacro.secondsPerQuestion)
+        setExamState('taking')
+        setStartTime(Date.now())
+        setQuestionStartTime(Date.now())
+        setTimeLeft(secondsPerQuestion)
+        setUserAnswers([])
+        return
+      }
+
       // soportar subject con topic: e.g. 'lengua:comentario'
       let subjectParam = selectedSubject
       let topicParam: string | undefined = undefined
@@ -127,22 +164,23 @@ export function ExamMode({ sessionId }: ExamModeProps) {
         throw new Error("Error obteniendo preguntas")
       }
 
-        const data = await response.json()
+      const data = await response.json()
 
-        if (!data || !Array.isArray(data.questions) || data.questions.length === 0) {
-          alert("No hay preguntas disponibles para esta configuración. Intenta con otra materia o dificultad.")
-          setIsLoading(false)
-          return
-        }
+      if (!data || !Array.isArray(data.questions) || data.questions.length === 0) {
+        alert("No hay preguntas disponibles para esta configuración. Intenta con otra materia o dificultad.")
+        setIsLoading(false)
+        return
+      }
 
       setQuestions(data.questions)
       setExamState("taking")
       setStartTime(Date.now())
       setQuestionStartTime(Date.now())
+      setTimeLeft(secondsPerQuestion)
       setUserAnswers([])
     } catch (error) {
       console.error("Error:", error)
-      alert("Error al cargar el examen. Por favor, intenta de nuevo.")
+      alert("Error al cargar el simulacro. Por favor, intenta de nuevo.")
     } finally {
       setIsLoading(false)
     }
@@ -171,6 +209,49 @@ export function ExamMode({ sessionId }: ExamModeProps) {
       setQuestionStartTime(Date.now())
     }
   }
+
+  const handleTimeout = () => {
+    const currentQuestion = questions[currentQuestionIndex]
+    const timeSpent = secondsPerQuestion
+    const answer: UserAnswer = {
+      questionId: currentQuestion._id,
+      selectedOption: 'TIMEOUT',
+      isCorrect: false,
+      timeSpent,
+    }
+
+    const newAnswers = [...userAnswers, answer]
+    setUserAnswers(newAnswers)
+
+    if (currentQuestionIndex === questions.length - 1) {
+      finishExam(newAnswers)
+    } else {
+      setCurrentQuestionIndex(currentQuestionIndex + 1)
+      setQuestionStartTime(Date.now())
+      setTimeLeft(secondsPerQuestion)
+    }
+  }
+
+  // Temporizador por pregunta durante el examen
+  useEffect(() => {
+    if (examState !== 'taking' || questions.length === 0) return
+
+    setTimeLeft(secondsPerQuestion)
+    const interval = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(interval)
+          // si no se ha respondido, forzar timeout
+          handleTimeout()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [examState, currentQuestionIndex, questions, secondsPerQuestion])
 
   const handleOpenSubmit = (text: string) => {
     if (!isOpenAnswerValid) return
@@ -244,7 +325,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
         setAnalysis(data.analysis)
       }
     } catch (error) {
-      console.error("Error guardando examen:", error)
+      console.error("Error guardando simulacro:", error)
     }
 
     setExamState("results")
@@ -276,17 +357,17 @@ export function ExamMode({ sessionId }: ExamModeProps) {
               <GraduationCap className="w-16 h-16 text-white" />
             </div>
             <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-3">
-              Modo Examen
-            </h2>
-            <p className="text-lg text-slate-600 dark:text-slate-400">
-              Practica con preguntas de exámenes oficiales certificadas
-            </p>
+                Modo Simulacro
+              </h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400">
+                Practica con simulacros confeccionados a partir de preguntas oficiales
+              </p>
           </div>
 
           {/* Configuración del Examen */}
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl border border-slate-200 dark:border-slate-700">
             <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">
-              Configura tu examen
+              Configura tu simulacro
             </h3>
 
             {/* Selección de Materia */}
@@ -320,31 +401,9 @@ export function ExamMode({ sessionId }: ExamModeProps) {
               </div>
             </div>
 
-            {/* Selección de Dificultad */}
-            <div className="mb-8">
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-                📈 Nivel de dificultad:
-              </label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {DIFFICULTY_OPTIONS.map((difficulty) => (
-                  <button
-                    key={difficulty.value}
-                    onClick={() => setSelectedDifficulty(difficulty.value)}
-                    className={cn(
-                      "p-4 rounded-xl border-2 transition-all pointer-events-auto",
-                      selectedDifficulty === difficulty.value
-                        ? "border-pink-500 bg-pink-50 dark:bg-pink-900/20 shadow-lg scale-105"
-                        : "border-slate-200 dark:border-slate-700 hover:border-pink-300 dark:hover:border-pink-600"
-                    )}
-                  >
-                    <p className="font-bold text-slate-900 dark:text-white mb-1">{difficulty.label}</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">{difficulty.stars}</p>
-                    {selectedDifficulty === difficulty.value && (
-                      <CheckCircle2 className="w-4 h-4 text-pink-600 mt-2" />
-                    )}
-                  </button>
-                ))}
-              </div>
+            {/* Dificultad fija (Grado Medio) */}
+            <div className="mb-6">
+              <p className="text-sm text-slate-600 dark:text-slate-400">La dificultad está fijada a <strong>Intermedio</strong> para este simulacro de Grado Medio. No puedes cambiarla.</p>
             </div>
 
             {/* Cantidad de Preguntas */}
@@ -361,6 +420,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
                   value={questionCount}
                   onChange={(e) => setQuestionCount(Number(e.target.value))}
                   className="flex-1 pointer-events-auto"
+                  disabled={useSimulacroPreset}
                 />
                 <input
                   type="number"
@@ -373,15 +433,64 @@ export function ExamMode({ sessionId }: ExamModeProps) {
                   }}
                   className="w-20 text-center rounded-md border px-2 py-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   aria-label="Número de preguntas"
+                  disabled={useSimulacroPreset}
                 />
                 <span className="text-sm text-slate-500 dark:text-slate-400">preguntas</span>
               </div>
             </div>
 
+            {/* Tiempo por pregunta */}
+            <div className="mb-8">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+                ⏱️ Tiempo por pregunta (segundos):
+              </label>
+              <div className="flex items-center gap-3">
+                <select
+                  value={secondsPerQuestion}
+                  onChange={(e) => setSecondsPerQuestion(Number(e.target.value))}
+                  className="px-3 py-2 rounded-md border bg-white dark:bg-slate-800"
+                >
+                  <option value={30}>30</option>
+                  <option value={45}>45</option>
+                  <option value={60}>60</option>
+                  <option value={90}>90</option>
+                  <option value={120}>120</option>
+                </select>
+                <span className="text-sm text-slate-500 dark:text-slate-400">segundos por pregunta</span>
+              </div>
+            </div>
+
+            {/* Simulacro oficial (preset) */}
+            <div className="mb-6">
+              <label className="inline-flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useSimulacroPreset}
+                  onChange={(e) => setUseSimulacroPreset(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="font-semibold text-slate-900 dark:text-white">Usar simulacro oficial (Grado Medio)</span>
+              </label>
+              {useSimulacroPreset && (
+                <div className="mt-3 flex items-center gap-3">
+                  <label className="text-sm text-slate-600 dark:text-slate-400">Tiempo total (min):</label>
+                  <input
+                    type="number"
+                    min={10}
+                    max={180}
+                    value={timeTotalMinutes}
+                    onChange={(e) => setTimeTotalMinutes(Math.max(10, Math.min(180, Number(e.target.value) || 60)))}
+                    className="w-24 text-center rounded-md border px-2 py-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  />
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Se generará un simulacro por bloques (distribución oficial).</p>
+                </div>
+              )}
+            </div>
+
             {/* Botón Iniciar */}
             <button
               onClick={startExam}
-              disabled={!selectedSubject || !selectedDifficulty || isLoading}
+                disabled={(!useSimulacroPreset && !selectedSubject) || isLoading}
               className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl p-6 transition-all shadow-xl hover:shadow-2xl font-bold text-lg flex items-center justify-center gap-3"
             >
               {isLoading ? (
@@ -392,10 +501,63 @@ export function ExamMode({ sessionId }: ExamModeProps) {
               ) : (
                 <>
                   <PlayCircle className="w-6 h-6" />
-                  Iniciar Examen
+                  Iniciar Simulacro
                 </>
               )}
             </button>
+
+              {/* Descargas oficiales (AccesoIA - Valencia, Grado Medio) - visible en setup */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="mt-6 bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-md border border-slate-200 dark:border-slate-700"
+              >
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">Descargas — AccesoIA (Valencia · Grado Medio)</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">Enlaces útiles y PDFs de pruebas de acceso (València, Grado Mitjà).</p>
+                <ul className="space-y-2">
+                  <li>
+                    <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2017.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2017 — Prueba de Acceso (parte común)</a>
+                    <div className="text-xs text-slate-500">ceice.gva.es · 2017 · PDF verificado</div>
+                  </li>
+                  <li>
+                    <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2018.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2018 — Prueba de Acceso (parte común)</a>
+                    <div className="text-xs text-slate-500">ceice.gva.es · 2018 · PDF verificado</div>
+                  </li>
+                  <li>
+                    <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2019.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2019 — Prueba de Acceso (parte común)</a>
+                    <div className="text-xs text-slate-500">ceice.gva.es · 2019 · PDF verificado</div>
+                  </li>
+                  <li>
+                    <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2020.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2020 — Prueba de Acceso (parte común)</a>
+                    <div className="text-xs text-slate-500">ceice.gva.es · 2020 · PDF verificado</div>
+                  </li>
+                  <li>
+                    <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2021.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2021 — Prueba de Acceso (parte común)</a>
+                    <div className="text-xs text-slate-500">ceice.gva.es · 2021 · PDF verificado</div>
+                  </li>
+                  <li>
+                    <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2022.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2022 — Prueba de Acceso (parte común)</a>
+                    <div className="text-xs text-slate-500">ceice.gva.es · 2022 · PDF verificado</div>
+                  </li>
+                  <li>
+                    <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2023.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2023 — Prueba de Acceso (parte común)</a>
+                    <div className="text-xs text-slate-500">ceice.gva.es · 2023 · PDF verificado</div>
+                  </li>
+                  <li>
+                    <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2024.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2024 — Prueba de Acceso (parte común)</a>
+                    <div className="text-xs text-slate-500">ceice.gva.es · 2024 · PDF verificado</div>
+                  </li>
+                  <li>
+                    <a href="https://ceice.gva.es/documents/388109149/0/JUNTOS+GM+2025.pdf/eaff2543-5199-f592-6af1-aa689a78ea67" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">JUNTOS GM 2025 — Documentación / partes (GM 2025)</a>
+                    <div className="text-xs text-slate-500">ceice.gva.es · 2025 · PDF verificado</div>
+                  </li>
+                  <li>
+                    <a href="https://ceice.gva.es/documents/388109149/392974777/OrientacionesGMGS_va.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Orientaciones Admisión GM/GS 2024-25 (valencià)</a>
+                    <div className="text-xs text-slate-500">ceice.gva.es · 2024 · PDF verificado</div>
+                  </li>
+                </ul>
+              </motion.div>
           </div>
         </div>
       </motion.div>
@@ -475,6 +637,31 @@ export function ExamMode({ sessionId }: ExamModeProps) {
                   <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-6 leading-relaxed">
                     {currentQuestion.question}
                   </h3>
+                  {currentQuestion.textReference && (
+                    <div className="mb-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                      <strong>Referencia:</strong>
+                      <div className="mt-2">{currentQuestion.textReference}</div>
+                      {Array.isArray(currentQuestion.reqImages) && currentQuestion.reqImages.length > 0 && (
+                        <div className="mt-2 text-xs text-slate-600 dark:text-slate-400">
+                          <strong>Imágenes de apoyo:</strong>
+                          <ul className="list-disc ml-5 mt-1">
+                            {currentQuestion.reqImages.map((img, i) => (
+                              <li key={i}>{img}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {currentQuestion.source && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                      <strong>Fuente:</strong> {currentQuestion.source.name}{currentQuestion.source.year ? ` — ${currentQuestion.source.year}` : ''}
+                      {currentQuestion.source.url && (
+                        <> · <a href={currentQuestion.source.url} target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 hover:underline">ver documento</a></>
+                      )}
+                    </p>
+                  )}
 
                   {/* Options */}
                   <div className="space-y-3">
@@ -794,13 +981,101 @@ export function ExamMode({ sessionId }: ExamModeProps) {
           </div>
 
           {/* Action Buttons */}
+          {/* Descargas oficiales (AccesoIA - Valencia, Grado Medio) */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-6 bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-md border border-slate-200 dark:border-slate-700"
+          >
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">Descargas — AccesoIA (Valencia · Grado Medio)</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">Enlaces útiles y PDFs de pruebas de acceso (València, Grado Mitjà). Puedo recopilar y añadir aquí todos los PDFs oficiales si me das permiso para buscarlos.</p>
+            <ul className="space-y-2">
+              <li>
+                <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2017.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2017 — Prueba de Acceso (parte común)</a>
+                <div className="text-xs text-slate-500">ceice.gva.es · 2017 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2018.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2018 — Prueba de Acceso (parte común)</a>
+                <div className="text-xs text-slate-500">ceice.gva.es · 2018 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2019.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2019 — Prueba de Acceso (parte común)</a>
+                <div className="text-xs text-slate-500">ceice.gva.es · 2019 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2020.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2020 — Prueba de Acceso (parte común)</a>
+                <div className="text-xs text-slate-500">ceice.gva.es · 2020 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2021.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2021 — Prueba de Acceso (parte común)</a>
+                <div className="text-xs text-slate-500">ceice.gva.es · 2021 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2022.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2022 — Prueba de Acceso (parte común)</a>
+                <div className="text-xs text-slate-500">ceice.gva.es · 2022 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2023.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2023 — Prueba de Acceso (parte común)</a>
+                <div className="text-xs text-slate-500">ceice.gva.es · 2023 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2024.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2024 — Prueba de Acceso (parte común)</a>
+                <div className="text-xs text-slate-500">ceice.gva.es · 2024 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://ceice.gva.es/documents/388109149/0/JUNTOS+GM+2025.pdf/eaff2543-5199-f592-6af1-aa689a78ea67" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">JUNTOS GM 2025 — Documentación / partes (GM 2025)</a>
+                <div className="text-xs text-slate-500">ceice.gva.es · 2025 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://ceice.gva.es/documents/388109149/392974777/OrientacionesGMGS_va.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Orientaciones Admisión GM/GS 2024-25 (valencià)</a>
+                <div className="text-xs text-slate-500">ceice.gva.es · 2024 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://ceice.gva.es/documents/388109149/392974777/OrientacionesGMGS_es.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Orientaciones Admisión GM/GS 2024-25 (español)</a>
+                <div className="text-xs text-slate-500">ceice.gva.es · 2024 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://ceice.gva.es/documents/388109149/392974777/Prioridades_GM.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Criterios de Prioridad en la Admisión - CFGM</a>
+                <div className="text-xs text-slate-500">ceice.gva.es · 2024 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://portal.edu.gva.es/iesbenissa/wp-content/uploads/sites/309/2024/02/InformacioPAC_CFGM_24.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Informació PAC CFGM 2024 (IES Benissa)</a>
+                <div className="text-xs text-slate-500">portal.edu.gva.es · 2024 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://portal.edu.gva.es/ieslavalldigna/wp-content/uploads/sites/512/2024/02/Prova-acces-cicle-mitja.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Prova d'accés Cicle Mitjà 2024 (IES La Valldigna)</a>
+                <div className="text-xs text-slate-500">portal.edu.gva.es · 2024 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://portal.edu.gva.es/46020480/wp-content/uploads/sites/468/2025/03/Proves-dacces-FP-2025.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Proves d'accés FP 2025 — recopilación (Portal Educatiu)</a>
+                <div className="text-xs text-slate-500">portal.edu.gva.es · 2025 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://portal.edu.gva.es/iesalcasser/wp-content/uploads/sites/303/2025/02/PROVA-ACCES-GRAU-MITJA.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Prova Accés Grau Mitjà 2025 (IES Alcasser)</a>
+                <div className="text-xs text-slate-500">portal.edu.gva.es · 2025 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://portal.edu.gva.es/iesisabel-clarasimo/wp-content/uploads/sites/1636/2025/02/Proves-acces-CF2025.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Proves d'accés Cicles Formatius 2025 (IES Isabel Clara Simó)</a>
+                <div className="text-xs text-slate-500">portal.edu.gva.es · 2025 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://portal.edu.gva.es/iesabastos/wp-content/uploads/sites/617/2025/03/25PACFGM-v-Informacio-proves-dacces-de-grau-mitja.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Proves d'accés CFGM 2025 - Informació (IES Abastos)</a>
+                <div className="text-xs text-slate-500">portal.edu.gva.es · 2025 · PDF verificado</div>
+              </li>
+              <li>
+                <a href="https://portal.edu.gva.es/46020480/wp-content/uploads/sites/468/2024/02/Proves-dacces-cicles.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Proves d'accés a Cicles — recopilación 2024</a>
+                <div className="text-xs text-slate-500">portal.edu.gva.es · 2024 · enlace no verificado</div>
+              </li>
+            </ul>
+          </motion.div>
           <div className="flex gap-4">
             <button
               onClick={resetExam}
               className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-2xl p-5 transition-all shadow-xl hover:shadow-2xl font-bold text-lg flex items-center justify-center gap-3"
             >
               <RotateCcw className="w-6 h-6" />
-              Hacer Otro Examen
+              Hacer otro simulacro
             </button>
           </div>
         </div>

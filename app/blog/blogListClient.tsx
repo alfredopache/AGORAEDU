@@ -37,15 +37,14 @@ export default function BlogListClient({ entries }: { entries: BlogPost[] }) {
   ]
 
   const filteredEntries = entries.filter((entry) => {
+    // Si está en 'Todas', mostramos todos los posts (incluso sin tags)
+    if (selectedCategory === 'all') return true
+
     if (!entry.tags || entry.tags.length === 0) return false
 
     const entryCategoryIds = Array.from(
       new Set(entry.tags.map(categoryIdFromTag).filter(Boolean))
     )
-
-    if (selectedCategory === 'all') {
-      return entryCategoryIds.length > 0
-    }
 
     return entryCategoryIds.includes(selectedCategory)
   })
