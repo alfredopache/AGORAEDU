@@ -411,8 +411,8 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved, onDel
                 className={cn(
                   "w-full text-left px-4 py-3 rounded-2xl border text-sm font-medium transition-all",
                   currentValue === opt.value
-                    ? "border-purple-500 bg-purple-900/30 text-purple-200"
-                    : "border-slate-700 bg-slate-800/50 hover:border-purple-500/60 hover:bg-slate-800"
+                    ? "border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-200"
+                    : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800/50 hover:border-purple-300 dark:hover:border-purple-600"
                 )}
               >
                 {(opt as any).emoji ? <span className="mr-2">{(opt as any).emoji}</span> : null}{opt.label}
