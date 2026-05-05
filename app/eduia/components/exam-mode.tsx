@@ -15,9 +15,12 @@ import {
   ChevronRight,
   Award,
   GraduationCap,
-  Lightbulb
+  Lightbulb,
 } from "lucide-react"
 import { cn, clampRedactionText, getWordCount, getLineCount, MAX_REDACTION_LINES, MAX_REDACTION_WORDS, formatExamSource } from "@/lib/utils"
+import { CableMatch, isMatchingQuestion, extractMatchPairsFromOptions } from "./cable-match"
+import { PdfReferenceImage } from "./pdf-reference-image"
+import type { PracticeExamPack } from "@/lib/practice-exam-generator"
 
 const motion = motionBase as any
 
@@ -57,13 +60,27 @@ type ExamState = "setup" | "taking" | "results"
 
 const SUBJECT_OPTIONS = [
   { value: "mixto", label: "Mixto (todas)", emoji: "🧠", color: "from-indigo-500 to-purple-500" },
-  { value: "matematicas", label: "Matemáticas", emoji: "🔢", color: "from-blue-600 to-indigo-600" },
-  { value: "lengua", label: "Lengua y Comunicación", emoji: "📝", color: "from-indigo-500 to-purple-500" },
-  { value: "lengua:comentario", label: "Comentario de texto", emoji: "📚", color: "from-pink-500 to-pink-600" },
+  { value: "lengua-literatura", label: "Lengua y Literatura", emoji: "📝", color: "from-indigo-500 to-purple-500" },
   { value: "ingles", label: "Inglés", emoji: "🌍", color: "from-emerald-500 to-green-600" },
-  { value: "sociales", label: "Ciencias Sociales", emoji: "🏛️", color: "from-yellow-500 to-orange-500" },
-  { value: "sociales:historia", label: "Historia", emoji: "🏺", color: "from-yellow-600 to-orange-600" },
+  { value: "sociales", label: "Ciencias Sociales, Geografía e Historia", emoji: "🏛️", color: "from-yellow-500 to-orange-500" },
+  { value: "matematicas", label: "Matemáticas", emoji: "🔢", color: "from-blue-600 to-indigo-600" },
+  { value: "naturales", label: "Ciencias Naturales", emoji: "💧", color: "from-teal-500 to-cyan-500" },
   { value: "tic", label: "TIC", emoji: "💻", color: "from-green-400 to-teal-500" },
+]
+
+const SUBJECT_GROUPS = [
+  {
+    title: "Parte lingüística",
+    items: ["lengua-literatura", "ingles"],
+  },
+  {
+    title: "Parte social",
+    items: ["sociales"],
+  },
+  {
+    title: "Parte científico-matemática-técnica",
+    items: ["matematicas", "naturales", "tic"],
+  },
 ]
 
 const DIFFICULTY_OPTIONS = [
@@ -75,9 +92,45 @@ const DIFFICULTY_OPTIONS = [
 export function ExamMode({ sessionId }: ExamModeProps) {
   const [examState, setExamState] = useState<ExamState>("setup")
   const [selectedSubject, setSelectedSubject] = useState<string>("")
+
+  const GM_PDFS: Record<string, string> = {
+    '2017': 'https://ceice.gva.es/documents/388109149/391038839/GM_2017.pdf',
+    '2018': 'https://ceice.gva.es/documents/388109149/391038839/GM_2018.pdf',
+    '2019': 'https://ceice.gva.es/documents/388109149/391038839/GM_2019.pdf',
+    '2020': 'https://ceice.gva.es/documents/388109149/391038839/GM_2020.pdf',
+    '2021': 'https://ceice.gva.es/documents/388109149/391038839/GM_2021.pdf',
+    '2022': 'https://ceice.gva.es/documents/388109149/391038839/GM_2022.pdf',
+    '2023': 'https://ceice.gva.es/documents/388109149/391038839/GM_2023.pdf',
+    '2024': 'https://ceice.gva.es/documents/388109149/391038839/GM_2024.pdf',
+    '2025': 'https://ceice.gva.es/documents/388109149/0/JUNTOS+GM+2025.pdf/eaff2543-5199-f592-6af1-aa689a78ea67',
+  }
+
+  const resolveImage = (img: string):
+    | { type: 'image'; url: string }
+    | { type: 'pdf-proxy'; url: string; label: string }
+    | { type: 'text'; value: string } => {
+    if (/^https?:\/\//.test(img) && /\.(png|jpe?g|gif|webp|avif|svg|bmp)(\?.*)?$/i.test(img)) {
+      return { type: 'image', url: img }
+    }
+    const yearMatch = img.match(/GM_(\d{4})/)
+    if (img.includes('GM_')) {
+      const year = yearMatch?.[1]
+      const sourceUrl = year && GM_PDFS[year] ? GM_PDFS[year] : null
+      const proxyUrl = sourceUrl ? `/api/pdf-proxy?url=${encodeURIComponent(sourceUrl)}` : `/api/pdf-proxy?url=${encodeURIComponent(`https://ceice.gva.es/documents/388109149/391038839/GM_${year}.pdf`)}`
+      return {
+        type: 'pdf-proxy',
+        url: proxyUrl,
+        label: year ? `Mostrar examen oficial GM ${year}` : 'Mostrar examen oficial',
+      }
+    }
+    if (/^https?:\/\//.test(img)) {
+      return { type: 'pdf-proxy', url: `/api/pdf-proxy?url=${encodeURIComponent(img)}`, label: 'Abrir recurso PDF' }
+    }
+    return { type: 'text', value: img }
+  }
   // Dificultad fija para simulacro de Grado Medio
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("intermedio")
-  const [questionCount, setQuestionCount] = useState<number>(10)
+  const [questionCount, setQuestionCount] = useState<number>(36)
   const [secondsPerQuestion, setSecondsPerQuestion] = useState<number>(60)
   const [useSimulacroPreset, setUseSimulacroPreset] = useState<boolean>(false)
   const [timeTotalMinutes, setTimeTotalMinutes] = useState<number>(60)
@@ -375,28 +428,67 @@ export function ExamMode({ sessionId }: ExamModeProps) {
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
                 📚 Selecciona el ámbito:
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                {SUBJECT_OPTIONS.map((subject) => (
-                  <button
-                    key={subject.value}
-                    onClick={() => setSelectedSubject(subject.value)}
-                    className={cn(
-                      "p-4 rounded-xl border-2 transition-all text-left group pointer-events-auto",
-                      selectedSubject === subject.value
-                        ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-lg scale-105"
-                        : "border-slate-200 dark:border-slate-700 hover:border-purple-300 dark:hover:border-purple-600"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-3xl">{subject.emoji}</span>
-                      <div>
-                        <p className="font-bold text-slate-900 dark:text-white">{subject.label}</p>
-                        {selectedSubject === subject.value && (
-                          <CheckCircle2 className="w-4 h-4 text-purple-600 mt-1" />
+              <div className="grid gap-6">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-3">General</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                    {SUBJECT_OPTIONS.filter((subject) => subject.value === 'mixto').map((subject) => (
+                      <button
+                        key={subject.value}
+                        onClick={() => setSelectedSubject(subject.value)}
+                        className={cn(
+                          "p-4 rounded-xl border-2 transition-all text-left group pointer-events-auto",
+                          selectedSubject === subject.value
+                            ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-lg scale-105"
+                            : "border-slate-200 dark:border-slate-700 hover:border-purple-300 dark:hover:border-purple-600"
                         )}
-                      </div>
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-3xl">{subject.emoji}</span>
+                          <div>
+                            <p className="font-bold text-slate-900 dark:text-white">{subject.label}</p>
+                            {selectedSubject === subject.value && (
+                              <CheckCircle2 className="w-4 h-4 text-purple-600 mt-1" />
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {SUBJECT_GROUPS.map((group) => (
+                  <div key={group.title}>
+                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-3">{group.title}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {group.items.map((value) => {
+                        const subject = SUBJECT_OPTIONS.find((item) => item.value === value)
+                        if (!subject) return null
+                        return (
+                          <button
+                            key={subject.value}
+                            onClick={() => setSelectedSubject(subject.value)}
+                            className={cn(
+                              "p-4 rounded-xl border-2 transition-all text-left group pointer-events-auto",
+                              selectedSubject === subject.value
+                                ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-lg scale-105"
+                                : "border-slate-200 dark:border-slate-700 hover:border-purple-300 dark:hover:border-purple-600"
+                            )}
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-3xl">{subject.emoji}</span>
+                              <div>
+                                <p className="font-bold text-slate-900 dark:text-white">{subject.label}</p>
+                                {selectedSubject === subject.value && (
+                                  <CheckCircle2 className="w-4 h-4 text-purple-600 mt-1" />
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        )
+                      })}
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -415,7 +507,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
                 <input
                   type="range"
                   min="1"
-                  max="30"
+                  max="36"
                   step="1"
                   value={questionCount}
                   onChange={(e) => setQuestionCount(Number(e.target.value))}
@@ -425,11 +517,11 @@ export function ExamMode({ sessionId }: ExamModeProps) {
                 <input
                   type="number"
                   min={1}
-                  max={30}
+                  max={36}
                   value={questionCount}
                   onChange={(e) => {
                     const v = Number(e.target.value)
-                    if (!isNaN(v)) setQuestionCount(Math.max(1, Math.min(30, Math.floor(v))))
+                    if (!isNaN(v)) setQuestionCount(Math.max(1, Math.min(36, Math.floor(v))))
                   }}
                   className="w-20 text-center rounded-md border px-2 py-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   aria-label="Número de preguntas"
@@ -487,24 +579,30 @@ export function ExamMode({ sessionId }: ExamModeProps) {
               )}
             </div>
 
-            {/* Botón Iniciar */}
-            <button
-              onClick={startExam}
+            {/* Acciones */}
+            <div className="space-y-3">
+              <button
+                onClick={startExam}
                 disabled={(!useSimulacroPreset && !selectedSubject) || isLoading}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl p-6 transition-all shadow-xl hover:shadow-2xl font-bold text-lg flex items-center justify-center gap-3"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  Cargando preguntas...
-                </>
-              ) : (
-                <>
-                  <PlayCircle className="w-6 h-6" />
-                  Iniciar Simulacro
-                </>
-              )}
-            </button>
+                className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-3xl p-5 transition-transform shadow-lg shadow-fuchsia-500/15 hover:-translate-y-0.5 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-base flex items-center justify-center gap-3"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Cargando preguntas...
+                  </>
+                ) : (
+                  <>
+                    <PlayCircle className="w-5 h-5" />
+                    Simular examen interactivo
+                  </>
+                )}
+              </button>
+
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Este PDF crea un examen nuevo con preguntas aleatorias de Grado Medio y anade un solucionario completo al final para practicar fuera de la app.
+              </p>
+            </div>
 
               {/* Descargas oficiales (AccesoIA - Valencia, Grado Medio) - visible en setup */}
               <motion.div
@@ -626,11 +724,16 @@ export function ExamMode({ sessionId }: ExamModeProps) {
                   </span>
                   {currentQuestion.source && (() => {
                     const srcInfo = formatExamSource(currentQuestion.source)
-                    return (
-                      <a href={srcInfo.url || '#'} target="_blank" rel="noreferrer" className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold flex items-center gap-1 hover:underline">
+                    return srcInfo.url ? (
+                      <a href={srcInfo.url} target="_blank" rel="noreferrer" className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold flex items-center gap-1 hover:underline">
                         <Award className="w-3 h-3" />
                         {srcInfo.label}
                       </a>
+                    ) : (
+                      <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full text-xs font-semibold flex items-center gap-1">
+                        <Award className="w-3 h-3" />
+                        {srcInfo.label}
+                      </span>
                     )
                   })()}
                 </div>
@@ -643,15 +746,32 @@ export function ExamMode({ sessionId }: ExamModeProps) {
                   {currentQuestion.textReference && (
                     <div className="mb-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                       <strong>Referencia:</strong>
-                      <div className="mt-2">{currentQuestion.textReference}</div>
+                      <div className="mt-2">{currentQuestion.textReference.replace(/\[REQ_IMAGE:[^\]]+\]/gi, '').trim()}</div>
                       {Array.isArray(currentQuestion.reqImages) && currentQuestion.reqImages.length > 0 && (
-                        <div className="mt-2 text-xs text-slate-600 dark:text-slate-400">
-                          <strong>Imágenes de apoyo:</strong>
-                          <ul className="list-disc ml-5 mt-1">
-                            {currentQuestion.reqImages.map((img, i) => (
-                              <li key={i}>{img}</li>
-                            ))}
-                          </ul>
+                        <div className="mt-4">
+                          <strong className="text-sm text-slate-800 dark:text-slate-200">Imágenes de apoyo:</strong>
+                          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                            {currentQuestion.reqImages.map((img, i) => {
+                              const resolved = resolveImage(img)
+                              return (
+                                <div key={i}>
+                                      {resolved.type === 'image' ? (
+                                    <img src={resolved.url} alt={`Imagen de referencia ${i + 1}`} className="w-full h-auto object-contain max-h-[500px] rounded-2xl border border-slate-200 dark:border-slate-700" />
+                                  ) : resolved.type === 'pdf-proxy' ? (
+                                    <PdfReferenceImage
+                                      pdfUrl={resolved.url}
+                                      token={img}
+                                      questionText={currentQuestion.question}
+                                      textReference={currentQuestion.textReference}
+                                      alt={`Imagen de referencia ${i + 1}`}
+                                    />
+                                  ) : (
+                                    <span className="text-xs text-slate-400">{resolved.value}</span>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -673,49 +793,86 @@ export function ExamMode({ sessionId }: ExamModeProps) {
 
                   {/* Options */}
                   <div className="space-y-3">
-                    {Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0 ? (
-                      currentQuestion.options.map((option, index) => (
-                        <button
-                          key={index}
-                          onClick={() => handleAnswer(index)}
-                          className="w-full text-left p-5 bg-slate-50 dark:bg-slate-900 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-500 transition-all group"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 group-hover:border-purple-500 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-slate-700 dark:text-slate-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-all">
-                              {String.fromCharCode(65 + index)}
+                    {(() => {
+                      // Detect cable-match (visual matching) questions
+                      const matchPairs = Array.isArray(currentQuestion.options) && currentQuestion.options.length >= 2
+                        ? extractMatchPairsFromOptions(currentQuestion.options)
+                        : null
+                      const useMatchUI = matchPairs && isMatchingQuestion(currentQuestion.question, currentQuestion.topic)
+
+                      if (useMatchUI && matchPairs) {
+                        return (
+                          <CableMatch
+                            pairs={matchPairs}
+                            onComplete={(allCorrect) => {
+                              const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000)
+                              const answer: UserAnswer = {
+                                questionId: currentQuestion._id,
+                                selectedOption: allCorrect ? 0 : -1,
+                                isCorrect: allCorrect,
+                                timeSpent,
+                              }
+                              const newAnswers = [...userAnswers, answer]
+                              setUserAnswers(newAnswers)
+                            }}
+                            onNextQuestion={() => {
+                              if (currentQuestionIndex === questions.length - 1) {
+                                finishExam(userAnswers)
+                              } else {
+                                setCurrentQuestionIndex(currentQuestionIndex + 1)
+                                setQuestionStartTime(Date.now())
+                              }
+                            }}
+                          />
+                        )
+                      }
+
+                      if (Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) {
+                        return currentQuestion.options.map((option, index) => (
+                          <button
+                            key={index}
+                            onClick={() => handleAnswer(index)}
+                            className="w-full text-left p-5 bg-slate-50 dark:bg-slate-900 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-purple-400 dark:hover:border-purple-500 transition-all group"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 group-hover:border-purple-500 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-slate-700 dark:text-slate-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-all">
+                                {String.fromCharCode(65 + index)}
+                              </div>
+                              <span className="flex-1 text-base text-slate-800 dark:text-slate-200 group-hover:text-purple-900 dark:group-hover:text-purple-300">
+                                {option.text}
+                              </span>
+                              <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-purple-600 opacity-0 group-hover:opacity-100 transition-all" />
                             </div>
-                            <span className="flex-1 text-base text-slate-800 dark:text-slate-200 group-hover:text-purple-900 dark:group-hover:text-purple-300">
-                              {option.text}
-                            </span>
-                            <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-purple-600 opacity-0 group-hover:opacity-100 transition-all" />
-                          </div>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="space-y-3">
-                        <textarea
-                          value={openAnswer}
-                          onChange={(e) => setOpenAnswer(clampRedactionText(e.target.value, MAX_REDACTION_WORDS, MAX_REDACTION_LINES))}
-                          placeholder="Escribe tu respuesta aquí..."
-                          rows={8}
-                          className="w-full min-h-[120px] p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                        />
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <p className="text-sm text-slate-500 dark:text-slate-400">
-                            {openAnswerWordCount}/{MAX_REDACTION_WORDS} palabras · {openAnswerLineCount}/{MAX_REDACTION_LINES} líneas
-                          </p>
-                          <div className="flex justify-end">
-                            <button
-                              onClick={() => handleOpenSubmit(openAnswer)}
-                              disabled={!isOpenAnswerValid}
-                              className="px-6 py-2 rounded-lg bg-purple-600 text-white disabled:opacity-50"
-                            >
-                              Enviar respuesta
-                            </button>
+                          </button>
+                        ))
+                      }
+
+                      return (
+                        <div className="space-y-3">
+                          <textarea
+                            value={openAnswer}
+                            onChange={(e) => setOpenAnswer(clampRedactionText(e.target.value, MAX_REDACTION_WORDS, MAX_REDACTION_LINES))}
+                            placeholder="Escribe tu respuesta aquí..."
+                            rows={8}
+                            className="w-full min-h-[120px] p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                          />
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              {openAnswerWordCount}/{MAX_REDACTION_WORDS} palabras · {openAnswerLineCount}/{MAX_REDACTION_LINES} líneas
+                            </p>
+                            <div className="flex justify-end">
+                              <button
+                                onClick={() => handleOpenSubmit(openAnswer)}
+                                disabled={!isOpenAnswerValid}
+                                className="px-6 py-2 rounded-lg bg-purple-600 text-white disabled:opacity-50"
+                              >
+                                Enviar respuesta
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )
+                    })()}
                   </div>
                 </div>
 
@@ -728,10 +885,19 @@ export function ExamMode({ sessionId }: ExamModeProps) {
                         <Award className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
                         <div className="text-sm">
                           <p className="font-semibold text-green-900 dark:text-green-300 mb-1">Fuente Certificada</p>
-                          <p className="text-green-700 dark:text-green-400">{srcInfo.label}{currentQuestion.source.region ? ` · ${currentQuestion.source.region}` : ''}{currentQuestion.source.year ? ` (${currentQuestion.source.year})` : ''}</p>
-                          {srcInfo.url && (
-                            <a href={srcInfo.url} target="_blank" rel="noopener noreferrer" className="text-green-600 dark:text-green-400 hover:underline text-xs mt-1 inline-block">Ver fuente original →</a>
-                          )}
+                          <p className="text-green-700 dark:text-green-400">
+                            {srcInfo.url ? (
+                              <a href={srcInfo.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 hover:underline">
+                                <span className="font-medium text-green-700 dark:text-green-300">{srcInfo.label}</span>
+                                {currentQuestion.source.region || currentQuestion.source.year ? (
+                                  <span className="text-green-700 dark:text-green-400 text-xs">{currentQuestion.source.region ? ` · ${currentQuestion.source.region}` : ''}{currentQuestion.source.year ? ` (${currentQuestion.source.year})` : ''}</span>
+                                ) : null}
+                                <span className="text-xs text-green-600 dark:text-green-400 ml-1">Ver examen →</span>
+                              </a>
+                            ) : (
+                              <>{srcInfo.label}{currentQuestion.source.region ? ` · ${currentQuestion.source.region}` : ''}{currentQuestion.source.year ? ` (${currentQuestion.source.year})` : ''}</>
+                            )}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -748,8 +914,8 @@ export function ExamMode({ sessionId }: ExamModeProps) {
   // RESULTS VIEW
   if (examState === "results") {
     const correctCount = userAnswers.filter((a) => a.isCorrect).length
-    const gradedCount = userAnswers.filter((a) => typeof a.isCorrect !== 'undefined').length
-    const incorrectCount = gradedCount - correctCount
+    const gradedCount = questions.filter((q) => Array.isArray(q.options) && q.options.length > 0).length
+    const incorrectCount = Math.max(0, gradedCount - correctCount)
     const avgTime = Math.round(totalTime / Math.max(questions.length, 1))
 
     return (

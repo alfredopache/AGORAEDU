@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion as motionBase, AnimatePresence } from "framer-motion"
 import { CheckCircle2, XCircle, Trophy, Clock, TrendingUp, Award, BookOpen, ChevronRight } from "lucide-react"
+import { PdfReferenceImage } from "./pdf-reference-image"
 
 const motion = motionBase as any
 import { cn, clampRedactionText, getWordCount, getLineCount, MAX_REDACTION_LINES, MAX_REDACTION_WORDS, formatExamSource } from "@/lib/utils"
@@ -54,7 +55,43 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
   const [userAnswers, setUserAnswers] = useState<Array<number | string>>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
-    const [openAnswer, setOpenAnswer] = useState<string>("")
+  const [openAnswer, setOpenAnswer] = useState<string>("")
+
+  const GM_PDFS: Record<string, string> = {
+    '2017': 'https://ceice.gva.es/documents/388109149/391038839/GM_2017.pdf',
+    '2018': 'https://ceice.gva.es/documents/388109149/391038839/GM_2018.pdf',
+    '2019': 'https://ceice.gva.es/documents/388109149/391038839/GM_2019.pdf',
+    '2020': 'https://ceice.gva.es/documents/388109149/391038839/GM_2020.pdf',
+    '2021': 'https://ceice.gva.es/documents/388109149/391038839/GM_2021.pdf',
+    '2022': 'https://ceice.gva.es/documents/388109149/391038839/GM_2022.pdf',
+    '2023': 'https://ceice.gva.es/documents/388109149/391038839/GM_2023.pdf',
+    '2024': 'https://ceice.gva.es/documents/388109149/391038839/GM_2024.pdf',
+    '2025': 'https://ceice.gva.es/documents/388109149/0/JUNTOS+GM+2025.pdf/eaff2543-5199-f592-6af1-aa689a78ea67',
+  }
+
+  const resolveImage = (img: string):
+    | { type: 'image'; url: string }
+    | { type: 'pdf-proxy'; url: string; label: string }
+    | { type: 'text'; value: string } => {
+    if (/^https?:\/\//.test(img) && /\.(png|jpe?g|gif|webp|avif|svg|bmp)(\?.*)?$/i.test(img)) {
+      return { type: 'image', url: img }
+    }
+    const yearMatch = img.match(/GM_(\d{4})/)
+    if (img.includes('GM_')) {
+      const year = yearMatch?.[1]
+      const sourceUrl = year && GM_PDFS[year] ? GM_PDFS[year] : null
+      const proxyUrl = sourceUrl ? `/api/pdf-proxy?url=${encodeURIComponent(sourceUrl)}` : `/api/pdf-proxy?url=${encodeURIComponent(`https://ceice.gva.es/documents/388109149/391038839/GM_${year}.pdf`)}`
+      return {
+        type: 'pdf-proxy',
+        url: proxyUrl,
+        label: year ? `Mostrar examen oficial GM ${year}` : 'Mostrar examen oficial',
+      }
+    }
+    if (/^https?:\/\//.test(img)) {
+      return { type: 'pdf-proxy', url: `/api/pdf-proxy?url=${encodeURIComponent(img)}`, label: 'Abrir recurso PDF' }
+    }
+    return { type: 'text', value: img }
+  }
   const [startTime] = useState(Date.now())
   const [timeLeft, setTimeLeft] = useState<number>(config.timePerQuestion || 60)
   const openAnswerWordCount = getWordCount(openAnswer)
@@ -330,15 +367,32 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
                     {currentQuestion.textReference && (
                       <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                         <strong>Referencia:</strong>
-                        <div className="mt-2">{currentQuestion.textReference}</div>
+                        <div className="mt-2">{currentQuestion.textReference.replace(/\[REQ_IMAGE:[^\]]+\]/gi, '').trim()}</div>
                         {Array.isArray(currentQuestion.reqImages) && currentQuestion.reqImages.length > 0 && (
-                          <div className="mt-2 text-xs text-slate-600 dark:text-slate-400">
-                            <strong>Imágenes de apoyo:</strong>
-                            <ul className="list-disc ml-5 mt-1">
-                              {currentQuestion.reqImages.map((img, i) => (
-                                <li key={i}>{img}</li>
-                              ))}
-                            </ul>
+                          <div className="mt-4">
+                            <strong className="text-sm text-slate-800 dark:text-slate-200">Imágenes de apoyo:</strong>
+                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                              {currentQuestion.reqImages.map((img, i) => {
+                                const resolved = resolveImage(img)
+                                return (
+                                  <div key={i}>
+                                    {resolved.type === 'image' ? (
+                                      <img src={resolved.url} alt={`Imagen de referencia ${i + 1}`} className="w-full h-auto object-contain max-h-[500px] rounded-2xl border border-slate-200 dark:border-slate-700" />
+                                    ) : resolved.type === 'pdf-proxy' ? (
+                                      <PdfReferenceImage
+                                        pdfUrl={resolved.url}
+                                        token={img}
+                                        questionText={currentQuestion.question}
+                                        textReference={currentQuestion.textReference}
+                                        alt={`Imagen de referencia ${i + 1}`}
+                                      />
+                                    ) : (
+                                      <span className="text-xs text-slate-400">{resolved.value}</span>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -484,20 +538,19 @@ interface ExamResultsViewProps {
 
 export function ExamResultsView({ results, onNewExam, onBackToChat }: ExamResultsViewProps) {
   let correctCount = 0
-  let gradedCount = 0
+  const gradedCount = results.questions.filter((q) => q.options && q.options.length > 0).length
   let openCount = 0
 
   results.questions.forEach((q, index) => {
     const ans = results.userAnswers[index]
     if (q.options && q.options.length > 0) {
-      gradedCount++
       if (typeof ans === 'number' && q.options[ans]?.isCorrect) correctCount++
     } else {
       openCount++
     }
   })
 
-  const incorrectCount = gradedCount - correctCount
+  const incorrectCount = Math.max(0, gradedCount - correctCount)
   const averageTime = Math.round(results.timeSpent / Math.max(results.questions.length, 1) / 1000)
   const score = results.score
 

@@ -13,7 +13,7 @@ interface ConversationSidebarProps {
   onSelectConversation: (id: string) => void
   onNewChat: () => void
   onRefresh: () => void
-  onDeleteConversation?: (id: string) => void
+  onDeleteConversation?: (id: string, title?: string) => void
   sessionId?: string
 }
 
@@ -110,7 +110,7 @@ export function ConversationSidebar({
                   <div
                     onClick={(e) => {
                       e.stopPropagation()
-                      onDeleteConversation(conversation._id)
+                      onDeleteConversation(conversation._id, conversation.title)
                     }}
                     title="Borrar conversación"
                     role="button"

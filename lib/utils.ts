@@ -64,10 +64,31 @@ export function formatExamSource(src?: { name?: string | null; year?: string | n
     '2025': 'JUNTOS GM 2025 — Documentación / partes (GM 2025)',
   }
 
+  const VALENCIA_PDFS: Record<string, string> = {
+    '2017': 'https://ceice.gva.es/documents/388109149/391038839/GM_2017.pdf',
+    '2018': 'https://ceice.gva.es/documents/388109149/391038839/GM_2018.pdf',
+    '2019': 'https://ceice.gva.es/documents/388109149/391038839/GM_2019.pdf',
+    '2020': 'https://ceice.gva.es/documents/388109149/391038839/GM_2020.pdf',
+    '2021': 'https://ceice.gva.es/documents/388109149/391038839/GM_2021.pdf',
+    '2022': 'https://ceice.gva.es/documents/388109149/391038839/GM_2022.pdf',
+    '2023': 'https://ceice.gva.es/documents/388109149/391038839/GM_2023.pdf',
+    '2024': 'https://ceice.gva.es/documents/388109149/391038839/GM_2024.pdf',
+    '2025': 'https://ceice.gva.es/documents/388109149/0/JUNTOS+GM+2025.pdf/eaff2543-5199-f592-6af1-aa689a78ea67',
+  }
+
+  const fallbackUrl = year && VALENCIA_PDFS[year] ? VALENCIA_PDFS[year] : null
+  const finalUrl = url || fallbackUrl
+
   // Si la fuente indica REAL_PDF y tenemos año, preferimos la etiqueta oficial
   if (name.includes('REAL_PDF') && year) {
     const label = VALENCIA_LABELS[year] || `REAL_PDF — ${year}`
-    return { label, url }
+    return { label, url: finalUrl }
+  }
+
+  // Si la fuente indica una referencia oficial y tenemos año, mantenemos el nombre con año
+  if (name.includes('REFERENCIA_EXAMEN') && year) {
+    const label = `REFERENCIA_EXAMEN — ${year}`
+    return { label, url: finalUrl }
   }
 
   // Si el URL contiene un patrón conocido de GM_xxxx.pdf, extraer año

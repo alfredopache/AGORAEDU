@@ -11,6 +11,7 @@ import aboutSettings from './aboutSettings'
 import chatConversation from './chatConversation'
 import examQuestion from './examQuestion'
 import examAttempt from './examAttempt'
+import userStreak from './userStreak'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -26,6 +27,7 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     chatConversation,
     examQuestion,
     examAttempt,
+    userStreak,
   ],
 }
   

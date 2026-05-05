@@ -2,9 +2,9 @@ import { Metadata } from "next"
 import { EduIAMainLayout } from "./components/main-layout"
 
 export const metadata: Metadata = {
-  title: "Acceso IA - Asistente para Pruebas de Acceso a Grado Medio",
-  description: "Plataforma educativa con IA especializada en preparación para pruebas de acceso a ciclos formativos de grado medio. Incluye chatbot inteligente, exámenes de práctica y análisis de rendimiento.",
-  keywords: ["educación", "IA", "chatbot", "grado medio", "formación profesional", "España", "pruebas de acceso", "exámenes"],
+  title: "Acceso IA - Tutoría educativa para FP, Grado Básico y ESO",
+  description: "Plataforma educativa con IA para preparar pruebas de acceso a FP, reforzar Grado Básico y apoyar contenidos de ESO. Incluye tutor personalizado, práctica y simulacros adaptados.",
+  keywords: ["educación", "IA", "chatbot", "FP", "ESO", "Grado Básico", "pruebas de acceso", "formación profesional", "estudios"],
 }
 
 export default function EduIAPage() {
