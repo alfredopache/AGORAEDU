@@ -98,8 +98,13 @@ function shuffleWithRng(array, rng) {
 async function generateExample() {
   const seed = 123456789
   const rng = mulberry32(seed)
-  const presets = { gradoMedio: { lengua: 6, sociales: 9, ingles: 5, matematicas: 6, tic: 10 } }
-  const distribution = presets.gradoMedio
+  const preset = 'gradoMedio'
+  const presets = {
+    gradoMedio: { lengua: 6, sociales: 9, ingles: 5, matematicas: 6, tic: 10 },
+    gradoSuperior: { lengua: 6, sociales: 9, ingles: 5, matematicas: 6, tic: 10 },
+  }
+  const distribution = presets[preset]
+  const desiredDifficulty = preset === 'gradoSuperior' ? 'avanzado' : 'intermedio'
   const totalQuestions = Object.values(distribution).reduce((a, b) => a + b, 0)
 
   const datasetFile = path.join(process.cwd(), 'data', 'W5_dataset_ACCESO_IA_examenes_2017_2025_v3_GOLD_INFRA_READY.json')
@@ -152,7 +157,7 @@ async function generateExample() {
   const selectedQuestions = []
 
   for (const [subject, needed] of Object.entries(distribution)) {
-    let candidates = activeOnly.filter(q => q.subject === subject && q.difficulty === 'intermedio')
+    let candidates = activeOnly.filter(q => q.subject === subject && q.difficulty === desiredDifficulty)
     if (candidates.length < needed) {
       const more = activeOnly.filter(q => q.subject === subject)
       candidates = [...candidates, ...more]

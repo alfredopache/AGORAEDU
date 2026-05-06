@@ -38,6 +38,7 @@ export interface PracticeExamPackConfig {
   questionCount?: number
   subject?: string
   useOfficialPreset?: boolean
+  level?: "medio" | "superior"
 }
 
 type GeneratorContext = {
@@ -90,18 +91,25 @@ function multipleChoice(
   explanation: string,
   topic: string,
 ) {
+  const cleanCorrect = (correct || "").toString().trim()
+  const cleanDistractors = (distractors || []).map(d => (d || "").toString().trim()).filter(d => d.length > 0 && d !== cleanCorrect)
+  const uniqueDistractors = Array.from(new Set(cleanDistractors))
+  while (uniqueDistractors.length < 3) {
+    uniqueDistractors.push("Ninguna de las anteriores.")
+  }
+
   const options = shuffle(rng, [
-    { text: correct, isCorrect: true },
-    ...distractors.slice(0, 3).map((text) => ({ text, isCorrect: false })),
+    { text: cleanCorrect || "Respuesta no disponible.", isCorrect: true },
+    ...uniqueDistractors.slice(0, 3).map((text) => ({ text, isCorrect: false })),
   ])
 
   return {
     type: "multiple-choice" as const,
-    prompt,
+    prompt: (prompt || "").toString(),
     options,
-    answerText: correct,
-    explanation,
-    topic,
+    answerText: cleanCorrect || "Respuesta no disponible.",
+    explanation: (explanation || "").toString(),
+    topic: (topic || "").toString(),
   }
 }
 
@@ -141,18 +149,22 @@ function twoOptionChoice(
   explanation: string,
   topic: string,
 ) {
+  const cleanCorrect = (correct || "").toString().trim()
+  let cleanIncorrect = (incorrect || "").toString().trim()
+  if (!cleanIncorrect || cleanIncorrect === cleanCorrect) cleanIncorrect = "Ninguna de las anteriores."
+
   const options = shuffle(rng, [
-    { text: correct, isCorrect: true },
-    { text: incorrect, isCorrect: false },
+    { text: cleanCorrect || "Respuesta no disponible.", isCorrect: true },
+    { text: cleanIncorrect, isCorrect: false },
   ])
 
   return {
     type: "multiple-choice" as const,
-    prompt,
+    prompt: (prompt || "").toString(),
     options,
-    answerText: correct,
-    explanation,
-    topic,
+    answerText: cleanCorrect || "Respuesta no disponible.",
+    explanation: (explanation || "").toString(),
+    topic: (topic || "").toString(),
   }
 }
 
@@ -161,11 +173,25 @@ function buildLenguaPassageQuestions(
   passage: PassageDefinition,
   count: number,
 ) {
+  const extractFirstSentence = (text: string) => {
+    if (!text) return ""
+    const normalized = text.replace(/\s+/g, " ").trim()
+    const idx = normalized.indexOf('.')
+    return idx > 0 ? normalized.slice(0, idx + 1) : normalized
+  }
+
+  const mainIdea = (passage.mainIdea || passage.summary || extractFirstSentence(passage.text)).toString()
+  const typeLabel = (passage.type || "Texto informativo/comunicativo.").toString()
+  const environment = (passage.environment || "").toString() || "Estudiar fuentes renovables y movilidad activa."
+  const collaboration = (passage.collaboration || "Alumnos, familias y profesores.").toString()
+  const location = (passage.location || "Visitas a un vivero local.").toString()
+  const focus = (passage.focus || "Convertir al instituto en un ejemplo de practicas responsables.").toString()
+
   const firstBlock = [
     () => twoOptionChoice(
       rng,
       `a) ¿Cuál es el objetivo principal del texto?`,
-      passage.mainIdea,
+      mainIdea,
       `Describir una actividad deportiva escolar.`,
       `El texto explica un proyecto de sostenibilidad en el instituto, por eso su objetivo no es deportivo.`,
       "idea principal",
@@ -173,7 +199,7 @@ function buildLenguaPassageQuestions(
     () => twoOptionChoice(
       rng,
       `a) ¿Qué tipo de texto presenta?`,
-      `Texto informativo/comunicativo.`,
+      typeLabel,
       `Texto literario.`,
       `El pasaje transmite informacion sobre un proyecto escolar, por lo que es informativo/comunicativo.`,
       "tipo de texto",
@@ -181,7 +207,7 @@ function buildLenguaPassageQuestions(
     () => twoOptionChoice(
       rng,
       `b) Según el texto, ¿qué se estudia además del huerto escolar?`,
-      passage.environment,
+      environment,
       `La creacion de un club deportivo.`,
       `El texto menciona el estudio de fuentes renovables y movilidad activa, no actividades deportivas.`,
       "detalles",
@@ -212,7 +238,7 @@ B) El tema B describe el consumo responsable y la movilidad activa como medidas 
     () => multipleChoice(
       rng,
       `¿Quiénes participan en las sesiones de comunicación?`,
-      passage.collaboration,
+      collaboration,
       [
         `Solo los profesores del departamento.`,
         `Solo los alumnos de una clase.`,
@@ -224,7 +250,7 @@ B) El tema B describe el consumo responsable y la movilidad activa como medidas 
     () => multipleChoice(
       rng,
       `¿Dónde se realizan visitas según el texto?`,
-      passage.location,
+      location,
       [
         `A un museo de historia local.`,
         `A una fabrica de coches.`,
@@ -236,7 +262,7 @@ B) El tema B describe el consumo responsable y la movilidad activa como medidas 
     () => multipleChoice(
       rng,
       `¿Cuál es la meta final del proyecto?`,
-      passage.focus,
+      focus,
       [
         `Aumentar las ventas de productos educativos.`,
         `Reducir el numero de horas lectivas.`,
@@ -775,7 +801,7 @@ function buildMixedPlan(questionCount: number) {
 export function generatePracticeExamPack(config: PracticeExamPackConfig = {}): PracticeExamPack {
   const seed = config.seed ?? Math.floor(Math.random() * 1_000_000_000)
   const rng = mulberry32(seed)
-  const difficulty = config.difficulty || "intermedio"
+  const difficulty = config.difficulty || (config.level === 'superior' ? 'avanzado' : 'intermedio')
   const requestedSubject = mapRequestedSubject(config.subject)
   const questionCount = config.useOfficialPreset
     ? 36
@@ -891,9 +917,12 @@ El cierre remarca la importancia de formar habitos responsables desde la escuela
     }
   }
 
-  const subjectLabel = requestedSubject === "mixto" || config.useOfficialPreset
-    ? "Mixto Grado Medio"
-    : SUBJECT_LABELS[requestedSubject]
+  const levelKey = config.level ?? (config.useOfficialPreset ? "medio" : "medio")
+  const levelLabel = levelKey === "superior" ? "Grado Superior" : "Grado Medio"
+
+  const subjectLabel = requestedSubject === "mixto"
+    ? `Mixto ${levelLabel}`
+    : `${SUBJECT_LABELS[requestedSubject]} — ${levelLabel}`
 
   return {
     id: `practice-pack-${seed}`,

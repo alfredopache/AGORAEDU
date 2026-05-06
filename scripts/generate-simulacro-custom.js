@@ -111,9 +111,12 @@ async function generate() {
   const timeTotal = Number(args.timeTotal || '45') // minutes
   const seed = Number(args.seed || String(Math.floor(Math.random() * 1e9)))
   const secondsPerQuestionArg = args.secondsPerQuestion ? Number(args.secondsPerQuestion) : undefined
-
-  const presets = { gradoMedio: { lengua: 6, sociales: 9, ingles: 5, matematicas: 6, tic: 10 } }
+  const presets = {
+    gradoMedio: { lengua: 6, sociales: 9, ingles: 5, matematicas: 6, tic: 10 },
+    gradoSuperior: { lengua: 6, sociales: 9, ingles: 5, matematicas: 6, tic: 10 },
+  }
   const distribution = presets[preset] || presets.gradoMedio
+  const desiredDifficulty = preset === 'gradoSuperior' ? 'avanzado' : 'intermedio'
   const totalQuestions = Object.values(distribution).reduce((a, b) => a + b, 0)
   const secondsPerQuestion = secondsPerQuestionArg || Math.max(30, Math.floor((timeTotal * 60) / Math.max(1, totalQuestions)))
 
@@ -168,7 +171,7 @@ async function generate() {
   const selectedQuestions = []
 
   for (const [subject, needed] of Object.entries(distribution)) {
-    let candidates = activeOnly.filter(q => q.subject === subject && q.difficulty === 'intermedio')
+    let candidates = activeOnly.filter(q => q.subject === subject && q.difficulty === desiredDifficulty)
     if (candidates.length < needed) {
       const more = activeOnly.filter(q => q.subject === subject)
       candidates = [...candidates, ...more]

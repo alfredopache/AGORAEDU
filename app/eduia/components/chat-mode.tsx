@@ -26,7 +26,7 @@ interface ChatModeProps {
 }
 
 type ChatScope = "ambito_linguistico" | "ambito_cientifico"
-
+  
 type Itinerary = "gm" | "gs" | "gb1" | "gb2" | "eso"
 
 interface UserProfile {
@@ -245,6 +245,8 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved, onDel
   const [examConfig, setExamConfig] = useState<any>(null)
   const [examResults, setExamResults] = useState<any>(null)
   const [isGeneratingPracticePdf, setIsGeneratingPracticePdf] = useState(false)
+  const [datasets, setDatasets] = useState<string[]>([])
+  const [selectedDataset, setSelectedDataset] = useState<string | null>(null)
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null)
   const [selectedSubGoal, setSelectedSubGoal] = useState<string | null>(null)
   const [selectedContext, setSelectedContext] = useState<string | null>(null)
@@ -253,6 +255,23 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved, onDel
   const [profileDraft, setProfileDraft] = useState<Partial<UserProfile>>({
     name: session?.user?.name || "",
   })
+
+  const [onboardingSeen, setOnboardingSeen] = useState(false)
+
+  const getOnboardingSeenKey = () => {
+    return session?.user?.email ? `eduia-onboarding-seen-${session.user.email}` : `eduia-onboarding-seen-guest`
+  }
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const key = getOnboardingSeenKey()
+      const seen = localStorage.getItem(key)
+      setOnboardingSeen(!!seen)
+    } catch {
+      // ignore
+    }
+  }, [session?.user?.email])
 
   const userLabel = session?.user?.name ? session.user.name : "Google"
   const [isLocalhost, setIsLocalhost] = useState(false)
@@ -300,6 +319,34 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved, onDel
     }
   }, [session?.user?.name])
 
+  // Load available datasets from the server (files in /data)
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch('/api/exam/datasets')
+        if (!res.ok) return
+        const json = await res.json()
+        const ds: string[] = Array.isArray(json?.datasets) ? json.datasets : []
+        setDatasets(ds)
+      } catch (e) {
+        // ignore load errors
+      }
+    }
+    load()
+  }, [])
+
+  // Auto-select dataset based on selectedSubGoal (gm/gs) if a matching filename exists
+  useEffect(() => {
+    if (!datasets || datasets.length === 0) return
+    if (selectedSubGoal === 'gs') {
+      const gs = datasets.find(f => /grado.*superior|\bgs\b|superior/i.test(f))
+      if (gs) setSelectedDataset(gs)
+    } else if (selectedSubGoal === 'gm') {
+      const gm = datasets.find(f => /grado.*medio|\bgm\b|medio/i.test(f))
+      if (gm) setSelectedDataset(gm)
+    }
+  }, [datasets, selectedSubGoal])
+
   const saveProfile = (draft?: Partial<UserProfile>) => {
     const p = (draft || profileDraft) as UserProfile
     if (!p.itinerary) return
@@ -338,6 +385,46 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved, onDel
     if (!userProfile) {
       // Step 0: Welcome
       if (onboardingStep === 0) {
+        if (onboardingSeen) {
+          return (
+            <div className="max-w-xl w-full">
+              <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm text-center">
+                <p className="text-sm text-slate-700 mb-4">Ya has visto las preguntas iniciales. Puedes completarlas ahora o empezar sin perfil.</p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      try { localStorage.removeItem(getOnboardingSeenKey()) } catch {}
+                      setOnboardingSeen(false)
+                      setOnboardingStep(1)
+                    }}
+                    className="flex-1 rounded-2xl border border-slate-200 bg-white py-3 text-sm"
+                  >Completar perfil</button>
+                  <button
+                    onClick={() => {
+                      const minimal: UserProfile = {
+                        name: session?.user?.name || "Usuario",
+                        itinerary: "gm",
+                        currentSituation: "",
+                        focus: "Todos los ámbitos",
+                        selfAssessment: "",
+                        difficulty: "",
+                        mainUse: "Practicar ejercicios",
+                        learningStyle: "",
+                        timeAvailable: "",
+                        levelTest: "",
+                        accompanimentStyle: "",
+                      }
+                      try { localStorage.setItem(getProfileStorageKey(), JSON.stringify(minimal)) } catch {}
+                      setUserProfile(minimal)
+                    }}
+                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl py-3 text-sm font-semibold"
+                  >Empezar sin perfil</button>
+                </div>
+              </div>
+            </div>
+          )
+        }
+
         return (
           <div className="max-w-xl w-full">
             <div className="rounded-3xl border border-purple-500/20 bg-white/5 dark:bg-slate-900/60 p-8 shadow-sm">
@@ -356,7 +443,13 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved, onDel
                 />
               )}
               <button
-                onClick={() => setOnboardingStep(1)}
+                onClick={() => {
+                  try {
+                    localStorage.setItem(getOnboardingSeenKey(), "1")
+                  } catch {}
+                  setOnboardingSeen(true)
+                  setOnboardingStep(1)
+                }}
                 className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-2xl py-3 text-sm font-semibold transition-all"
               >Empezar →</button>
             </div>
@@ -710,7 +803,8 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved, onDel
   const handleSimOption = (topic: string) => {
     setShowSimMenu(false)
     if (topic.toLowerCase() === "mixto") {
-      sendMessage("Hazme un examen mixto de 36 preguntas de Grado Medio con todas las asignaturas.")
+      const levelText = selectedSubGoal === "gs" ? "Grado Superior" : "Grado Medio"
+      sendMessage(`Hazme un examen mixto de 36 preguntas de ${levelText} con todas las asignaturas.`)
     } else {
       sendMessage(`Hazme un examen de 36 preguntas de ${topic}.`)
     }
@@ -736,9 +830,15 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved, onDel
         difficulty: config.difficulty || "intermedio",
         subject: mapChatSubjectToApiSubject(config.subject),
         questionCount: String(36),
-        preset: "gradoMedio",
         seed: String(Math.floor(Math.random() * 1e9)),
       })
+      if (selectedGoal === "fp") {
+        const preset = selectedSubGoal === "gs" ? "gradoSuperior" : "gradoMedio"
+        params.set("preset", preset)
+      }
+      if (selectedDataset) {
+        params.set("dataset", selectedDataset)
+      }
       const response = await fetch(`/api/exam/practice-pack?${params.toString()}`)
       if (!response.ok) throw new Error("No se pudo generar el examen de practica")
       const data = await response.json()
@@ -847,6 +947,21 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved, onDel
                     {["Mixto", "Matemáticas", "Lengua", "Inglés", "Sociales", "Naturales", "TIC (Tecnología)"].map(t => (
                       <button key={t} onClick={() => handleSimOption(t)} className="text-left px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl text-sm">Simulador de {t}</button>
                     ))}
+                  </div>
+                  <div className="border-t border-slate-100 dark:border-slate-700 mt-2 pt-2">
+                    <p className="text-xs font-bold text-slate-500 p-2 uppercase">Datasets disponibles</p>
+                    <div className="flex flex-col gap-1 px-2 pb-1">
+                      {datasets.length === 0 ? (
+                        <div className="text-xs text-slate-400 px-2 py-1">No hay datasets disponibles</div>
+                      ) : (
+                        datasets.map(ds => (
+                          <button key={ds} onClick={() => { setSelectedDataset(ds); setShowSimMenu(false) }} className={cn("text-left px-3 py-2 rounded-xl text-sm w-full truncate", selectedDataset === ds ? "bg-purple-50 dark:bg-purple-900/20" : "hover:bg-slate-50 dark:hover:bg-slate-800/20")}>
+                            {ds}
+                          </button>
+                        ))
+                      )}
+                      {selectedDataset && <div className="text-xs text-slate-500 px-2 py-1">Seleccionado: {selectedDataset}</div>}
+                    </div>
                   </div>
                 </motion.div>
               )}
