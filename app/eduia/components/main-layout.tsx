@@ -1,7 +1,8 @@
 "use client"
 
+import Link from "next/link"
 import { useState, useEffect } from "react"
-import { MessageSquare, GraduationCap, Menu, X } from "lucide-react"
+import { MessageSquare, GraduationCap, Menu, X, ArrowUpRight, Shuffle } from "lucide-react"
 import { motion as motionBase, AnimatePresence } from "framer-motion"
 
 const motion = motionBase as any
@@ -10,6 +11,7 @@ import { ChatMode } from "./chat-mode"
 import { ExamMode } from "./exam-mode"
 import { ConversationSidebar } from "./conversation-sidebar"
 import { StreakBadge } from "@/components/streak-badge"
+import { DEFAULT_EDUIA_PLAN, EDUIA_PLAN_STORAGE_KEY, getEduIAPlan, type EduIAPlanId } from "@/lib/eduia-plans"
 
 type Mode = "chat" | "exam"
 
@@ -23,6 +25,8 @@ export interface Conversation {
 
 export function EduIAMainLayout() {
   const [mode, setMode] = useState<Mode>("chat")
+  const [selectedPlanId, setSelectedPlanId] = useState<EduIAPlanId>(DEFAULT_EDUIA_PLAN)
+  const [isLocalhost, setIsLocalhost] = useState(false)
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -48,6 +52,44 @@ export function EduIAMainLayout() {
       loadConversations(sessionId)
     }
   }, [sessionId])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const host = window.location.hostname
+    setIsLocalhost(host === "localhost" || host === "127.0.0.1")
+
+    const storedPlan = window.localStorage.getItem(EDUIA_PLAN_STORAGE_KEY)
+    if (storedPlan === "education" || storedPlan === "university" || storedPlan === "master") {
+      setSelectedPlanId(storedPlan)
+    }
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== EDUIA_PLAN_STORAGE_KEY) return
+      const nextPlan = event.newValue
+      if (nextPlan === "education" || nextPlan === "university" || nextPlan === "master") {
+        setSelectedPlanId(nextPlan)
+      }
+    }
+
+    window.addEventListener("storage", onStorage)
+    return () => window.removeEventListener("storage", onStorage)
+  }, [])
+
+  const activePlan = getEduIAPlan(selectedPlanId)
+  const planOrder: EduIAPlanId[] = ["education", "university", "master"]
+
+  const cyclePlan = () => {
+    if (typeof window === "undefined") return
+    const host = window.location.hostname
+    if (!(host === "localhost" || host === "127.0.0.1")) {
+      try { alert('La selección de plan solo está disponible en localhost para pruebas.') } catch {}
+      return
+    }
+    const idx = planOrder.indexOf(selectedPlanId)
+    const next = planOrder[(idx + 1) % planOrder.length]
+    try { localStorage.setItem(EDUIA_PLAN_STORAGE_KEY, next) } catch {}
+    setSelectedPlanId(next)
+  }
 
   const loadConversations = async (sid?: string) => {
     const id = sid || sessionId
@@ -197,14 +239,39 @@ export function EduIAMainLayout() {
                 >
                   <Menu className="w-5 h-5" />
                 </button>
-                <div className="flex items-center gap-2">
-                  <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-2 rounded-xl">
-                    <span className="text-2xl">🤖</span>
-                  </div>
-                  <div>
-                    <h1 className="font-bold text-xl text-slate-900 dark:text-white">Acceso IA</h1>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">Asistente Educativo</p>
-                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-2 rounded-xl">
+                      <span className="text-2xl">🤖</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h1 className="font-bold text-xl text-slate-900 dark:text-white">Acceso IA</h1>
+                          <span className={cn("inline-flex items-center rounded-full bg-gradient-to-r px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-white shadow-sm", activePlan.id === "university" ? "from-cyan-500 to-blue-600" : activePlan.id === "master" ? "from-amber-400 to-red-500" : "from-fuchsia-500 to-pink-500")}>{activePlan.name}</span>
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">Asistente Educativo</p>
+                      </div>
+
+                      <button
+                        onClick={cyclePlan}
+                        disabled={!isLocalhost}
+                        title={isLocalhost ? `Cambiar plan (actual: ${activePlan.name})` : "Cambio de plan: disponible solo en localhost para pruebas"}
+                        className={cn(
+                          "ml-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold transition",
+                          isLocalhost ? "bg-white text-slate-700 hover:shadow-sm" : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                        )}
+                      >
+                        <Shuffle className="w-4 h-4" />
+                        <span className="hidden sm:inline">Alternar plan</span>
+                      </button>
+                    </div>
+                  <Link
+                    href="/eduia/mejorar"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:text-white"
+                  >
+                    Mejorar
+                    <ArrowUpRight className="h-4 w-4" />
+                  </Link>
                 </div>
               </div>
 
@@ -249,6 +316,7 @@ export function EduIAMainLayout() {
                   key="chat"
                   sessionId={sessionId}
                   conversationId={currentConversationId}
+                  selectedPlanId={selectedPlanId}
                   onConversationSaved={handleConversationSaved}
                   onDeleteConversation={openDeleteConfirmation}
                 />

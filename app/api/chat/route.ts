@@ -1,8 +1,25 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getEduIAPlan } from "@/lib/eduia-plans"
+import { promises as fs } from "fs"
+import path from "path"
 
 interface Message {
   role: "user" | "assistant"
   content: string
+}
+
+interface IncomingUserProfile {
+  name?: string
+  itinerary?: string
+  currentSituation?: string
+  focus?: string
+  selfAssessment?: string
+  difficulty?: string
+  mainUse?: string
+  learningStyle?: string
+  timeAvailable?: string
+  levelTest?: string
+  accompanimentStyle?: string
 }
 
 const SYSTEM_PROMPT = `# ROL Y MISIÓN PRINCIPAL
@@ -79,9 +96,304 @@ Debes generar y gestionar las sesiones de los alumnos respetando la estructura o
 - Explicaciones complejas o simulacros completos: sí puedes extenderte, pero con estructura clara (listas, pasos numerados) y sin repetir información.
 - NUNCA rellenes con frases vacías como "¡Excelente pregunta!" o "Como Orquestador Pedagógico...". Ve al grano.
 `
+
+const PLAN_PROMPTS = {
+  education: `# PLAN EDUCATION
+- Prioriza claridad, velocidad y utilidad inmediata.
+- Responde con explicaciones didacticas y ejemplos sencillos.
+- Cierra con una siguiente accion solo cuando aporte valor.
+`,
+  university: `# PLAN UNIVERSITY — Enfoque PRO y Modo Thinking
+- Objetivo: ofrecer respuestas pedagógicas con diagnóstico profundo, priorización de lagunas y un plan de mejora inmediato, accionable y medible.
+
+- Procedimiento (comportamiento obligatorio):
+  1) Diagnóstico interno: antes de generar la respuesta visible, analiza silenciosamente el contexto y el perfil del alumno (userProfile) para identificar nivel, lagunas y causas probables. NO muestres cadenas de pensamiento ni razonamiento interno.
+  2) Estructura visible: responde siempre en bloques claros y marcados:
+     - Diagnóstico (1–2 frases): síntesis de la carencia raíz y evidencia rápida.
+     - Respuesta / Solución: explicación paso a paso, con comprobaciones, unidades y ejemplos concretos; incluye la forma de verificar la corrección.
+     - Para mejorar ahora (3 acciones concretas): ejercicios prácticos, tiempo estimado para cada uno y criterio de corrección (qué revisar para saber que se ha mejorado).
+     - Siguiente reto: una tarea breve que consolide lo aprendido (1 problema o pregunta).
+  3) Personalización: ajusta la dificultad, ejemplos y tiempos según userProfile.itinerary, focus, learningStyle y timeAvailable.
+  4) Gestión del error: si detectas errores frecuentes, ofrece pistas graduadas (primera pista sutil, segunda pista más dirigida) y solicita intento antes de dar la solución completa.
+  5) Tono y estilo: profesional, exigente y motivador. Directo, sin palabrería. Usa listas y pasos numerados; evita respuestas largas sin estructura.
+  6) Simulacros y ejercicios: si la petición es examen/simulacro, genera enunciados numerados en formato oficial sin soluciones; coloca las soluciones en un bloque separado bajo petición.
+
+- Extensión recomendada: respuestas compactas y accionables (3–8 bloques). Cuando haga falta, ofrece anexos con ejercicios adicionales y criterios de corrección.
+`,
+  master: `# PLAN MASTER
+- Mantén respuestas premium y muy claras, pero evita prometer funciones enterprise no implementadas.
+- Si el usuario pregunta por despliegues, equipos, centros o empresa, invita a contactar con ventas.
+`,
+} as const
+
+// --- Lightweight local dataset retrieval to ground answers ---
+let DATASET_CACHE: any[] | null = null
+let MATH_DATASET_CACHE: any[] | null = null
+const DATASET_PATH = path.join(process.cwd(), "data", "W5_dataset_ACCESO_IA_examenes_2017_2025_v3_GOLD_INFRA_READY.json")
+const MATH_DATASET_PATH = path.join(process.cwd(), "data", "asignaturas", "math_questions_from_dataset.json")
+
+async function loadLocalDataset(): Promise<any[]> {
+  if (DATASET_CACHE) return DATASET_CACHE
+  try {
+    const raw = await fs.readFile(DATASET_PATH, "utf8")
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) {
+      DATASET_CACHE = parsed
+    } else if (Array.isArray(parsed?.dataset_preguntas)) {
+      DATASET_CACHE = parsed.dataset_preguntas
+    } else if (Array.isArray(parsed?.questions)) {
+      DATASET_CACHE = parsed.questions
+    } else if (Array.isArray(parsed?.items)) {
+      DATASET_CACHE = parsed.items
+    } else if (Array.isArray(parsed?.data)) {
+      DATASET_CACHE = parsed.data
+    } else {
+      // fallback: try to extract array-like values
+      DATASET_CACHE = Array.isArray(Object.values(parsed)) ? Object.values(parsed).flat() : []
+    }
+    return DATASET_CACHE || []
+  } catch (e) {
+    // file may be absent in some environments; silently continue
+    return []
+  }
+}
+
+async function loadMathDataset(): Promise<any[]> {
+  if (MATH_DATASET_CACHE) return MATH_DATASET_CACHE
+  try {
+    const raw = await fs.readFile(MATH_DATASET_PATH, "utf8")
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) {
+      MATH_DATASET_CACHE = parsed
+    } else if (Array.isArray(parsed?.items)) {
+      MATH_DATASET_CACHE = parsed.items
+    } else if (Array.isArray(parsed?.questions)) {
+      MATH_DATASET_CACHE = parsed.questions
+    } else {
+      MATH_DATASET_CACHE = []
+    }
+    return MATH_DATASET_CACHE || []
+  } catch (e) {
+    return []
+  }
+}
+
+function isMathRelatedQuery(query: string, scope?: string) {
+  if (scope === "ambito_cientifico") return true
+  const normalized = (query || "").toLowerCase()
+  if (!normalized) return false
+  const keywords = [
+    // variations and colloquial forms
+    "matem",
+    "matemát",
+    "matematic",
+    "matemat",
+    "matematicas",
+    "matemáticas",
+    "mate",
+    "mates",
+    // common math topics
+    "ecuacion",
+    "fraccion",
+    "porcentaje",
+    "area",
+    "área",
+    "perimetro",
+    "perímetro",
+    "volumen",
+    "algebra",
+    "álgebra",
+    "geometr",
+    "estadistic",
+    "estadíst",
+    "problema",
+    "operacion",
+    "operación",
+    "resolver",
+    "raiz",
+    "raíz",
+  ]
+
+  return keywords.some((keyword) => normalized.includes(keyword))
+}
+
+function wantsMathQuestionGeneration(query: string, scope?: string) {
+  if (!isMathRelatedQuery(query, scope)) return false
+  const normalized = (query || "").toLowerCase()
+  const asksForQuestions = [
+    "pregunta",
+    "preguntas",
+    "ejercicio",
+    "ejercicios",
+    "simulacro",
+    "test",
+    "examen",
+    "problema",
+    "problemas",
+  ].some((keyword) => normalized.includes(keyword))
+  const asksToGenerate = [
+    "dame",
+    "hazme",
+    "genera",
+    "crea",
+    "ponme",
+    "quiero",
+    "necesito",
+    "saca",
+    "prepara",
+  ].some((keyword) => normalized.includes(keyword))
+  return asksForQuestions && asksToGenerate
+}
+
+function extractRequestedCount(query: string, fallback = 2, max = 5) {
+  const match = (query || "").match(/\b([1-9]|10)\b/)
+  if (!match) return fallback
+  const count = Number(match[1])
+  if (Number.isNaN(count)) return fallback
+  return Math.max(1, Math.min(max, count))
+}
+
+function scoreItemAgainstQuery(item: any, query: string) {
+  const text = [
+    item?.pregunta,
+    item?.tema,
+    item?.competencia,
+    item?.explicacion,
+    item?.alias,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+
+  const normalized = (query || "").toLowerCase()
+  const tokens = Array.from(new Set((normalized.match(/\b[a-záéíóúñ]{4,}\b/gi) || []).map((token) => token.toLowerCase())))
+
+  let score = 0
+  for (const token of tokens) {
+    if (text.includes(token)) score += 1
+  }
+
+  if (normalized.includes("ecuacion") && text.includes("ecuación")) score += 3
+  if (normalized.includes("fraccion") && text.includes("fracciones")) score += 3
+  if (normalized.includes("area") && text.includes("área")) score += 3
+  if (normalized.includes("geometr") && text.includes("geometr")) score += 2
+  if (normalized.includes("porcentaje") && text.includes("porcentaje")) score += 3
+  if (normalized.includes("estadistic") && text.includes("estadíst")) score += 3
+
+  return score
+}
+
+function formatMathQuestions(items: any[]) {
+  const lines = items.map((item, index) => {
+    const questionLines: string[] = []
+    questionLines.push(`Pregunta ${index + 1}. ${item.pregunta}`)
+    questionLines.push(`Tipo: ${item.tipo || 'No especificado'}`)
+    if (item.tema) questionLines.push(`Tema: ${item.tema}`)
+    if (item.opciones) questionLines.push(`Opciones: ${item.opciones}`)
+    if (item.tiempo_estimado) questionLines.push(`Tiempo estimado: ${item.tiempo_estimado}`)
+    if (item.alias) questionLines.push(`Referencia: ${item.alias}`)
+
+    // Siempre incluir solución, pista y rúbrica si existen
+    const solutionParts: string[] = []
+    // Prioriza campos con nombres comunes
+    const possibleSolution = item.respuesta_correcta || item.RESPUESTA_MODELO_EXCELENTE || item.respuesta_modelo || null
+    if (possibleSolution) solutionParts.push(`Solución (modelo): ${possibleSolution}`)
+    if (item.rubrica || item.RUBRICA_MODELO) solutionParts.push(`Rúbrica: ${item.rubrica || item.RUBRICA_MODELO}`)
+    if (item.pista || item.Pista) solutionParts.push(`Pista: ${item.pista || item.Pista}`)
+    if (item.explicacion || item.Explicación || item.Explicacion) solutionParts.push(`Explicación: ${item.explicacion || item.Explicación || item.Explicacion}`)
+
+    const full = questionLines.concat(['']).concat(solutionParts.length > 0 ? ['--- Solución y apoyo ---', ...solutionParts] : []).join('\n')
+    return full
+  })
+
+  return `${lines.join("\n\n")}\n\nFuente: data/asignaturas/math_questions_from_dataset.json`
+}
+
+function excerptFromItem(item: any, max = 300) {
+  if (!item) return ""
+  const label = [item.alias, item.ALIAS_PREGUNTA, item.id, item.ID].filter(Boolean).join(" | ")
+  const keys = ["pregunta", "Pregunta", "enunciado", "Explicación", "Explicacion", "RUBRICA_MODELO", "texto", "question", "explanation", "answer"]
+  for (const k of keys) {
+    if (item[k]) return `${label ? `${label}: ` : ""}${String(item[k]).slice(0, max)}`
+  }
+  const joined = Object.values(item || {}).filter(Boolean).join(" ")
+  return `${label ? `${label}: ` : ""}${String(joined).slice(0, max)}`
+}
+
+async function findRelevantDatasetExtracts(query: string, limit = 5, maxExcerptLength = 360, preferredDataset?: any[]) {
+  if (!query || query.trim().length === 0) return []
+  const ds = preferredDataset || await loadLocalDataset()
+  if (!ds || ds.length === 0) return []
+  const q = query.toLowerCase()
+  const tokens = Array.from(new Set((q.match(/\b[a-záéíóúñ]{4,}\b/gi) || []).map(t => t.toLowerCase())))
+  const scored = ds.map((it: any, idx: number) => {
+    const text = (typeof it === "string" ? it : Object.values(it || {}).filter(Boolean).join(" ")).toLowerCase()
+    let score = 0
+    if (text.includes(q)) score += 3
+    for (const t of tokens) if (text.includes(t)) score += 1
+    return { item: it, score, idx }
+  })
+  scored.sort((a, b) => b.score - a.score)
+  const picks = scored.filter(s => s.score > 0).slice(0, limit)
+  return picks.map(p => ({ score: p.score, excerpt: excerptFromItem(p.item, maxExcerptLength) }))
+}
+
+function sleep(ms: number) {
+  return new Promise((res) => setTimeout(res, ms))
+}
+
+async function callGroqWithRetries(groqApiKey: string, payload: any, maxAttempts = 4) {
+  const url = "https://api.groq.com/openai/v1/chat/completions"
+  let attempt = 0
+  let lastErr: any = null
+
+  while (attempt < maxAttempts) {
+    try {
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${groqApiKey}`,
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (resp.ok) {
+        return await resp.json()
+      }
+
+      const text = await resp.text()
+      console.error("Error de Groq API:", text)
+
+      // Retry on rate limit or server errors
+      if (resp.status === 429 || resp.status >= 500) {
+        const ra = resp.headers.get("retry-after")
+        let wait = 1000 * Math.pow(2, attempt) // exponential backoff base
+        if (ra) {
+          const parsed = parseFloat(ra)
+          if (!isNaN(parsed)) wait = Math.max(wait, parsed * 1000)
+        }
+        lastErr = text
+        attempt++
+        await sleep(wait)
+        continue
+      }
+
+      // Non-retryable error
+      throw new Error(`Groq API ${resp.status}: ${text}`)
+    } catch (err) {
+      lastErr = err
+      attempt++
+      const wait = 500 * Math.pow(2, attempt)
+      await sleep(wait)
+    }
+  }
+
+  throw new Error(`Groq API retries exhausted: ${String(lastErr).slice(0, 200)}`)
+}
 export async function POST(request: NextRequest) {
   try {
-    const { messages, scope, userProfile } = await request.json()
+    const { messages, scope, userProfile, planId } = await request.json() as { messages: Message[]; scope?: string; userProfile?: IncomingUserProfile; planId?: string }
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
@@ -103,6 +415,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const activePlan = getEduIAPlan(planId)
+
     // Preparar mensajes para Groq
     const scopePrompt =
       scope === "ambito_linguistico"
@@ -112,45 +426,81 @@ export async function POST(request: NextRequest) {
         : ""
 
     const profilePrompt = userProfile
-      ? `Información del alumno:\n- Nombre: ${userProfile.name}\n- Ciclo: ${userProfile.cycle}\n- Objetivo: ${userProfile.goal}\nUtiliza esta información para personalizar las respuestas y guiar el estudio.`
+      ? `Informacion del alumno:\n- Nombre: ${userProfile.name || "No indicado"}\n- Itinerario: ${userProfile.itinerary || "No indicado"}\n- Situacion actual: ${userProfile.currentSituation || "No indicada"}\n- Foco prioritario: ${userProfile.focus || "No indicado"}\n- Autoevaluacion: ${userProfile.selfAssessment || "No indicada"}\n- Dificultad principal: ${userProfile.difficulty || "No indicada"}\n- Uso principal: ${userProfile.mainUse || "No indicado"}\n- Estilo de aprendizaje: ${userProfile.learningStyle || "No indicado"}\n- Tiempo disponible: ${userProfile.timeAvailable || "No indicado"}\n- Prueba de nivel: ${userProfile.levelTest || "No indicada"}\n- Estilo de acompanamiento: ${userProfile.accompanimentStyle || "No indicado"}\nUtiliza esta informacion para personalizar de verdad las respuestas, ajustar profundidad, ejemplos, ritmo y prioridades.`
       : ""
+
+    const planPrompt = PLAN_PROMPTS[activePlan.id]
+
+    // Add lightweight dataset grounding: search local dataset for relevant extracts
+    const lastUserContent = (messages && messages.length > 0) ? (Array.from(messages).reverse().find(m => m.role === "user")?.content || messages.map((m: any) => m.content).join(" ")) : ""
+    const isMathQuery = isMathRelatedQuery(lastUserContent, scope)
+    const wantsGeneratedMathQuestions = wantsMathQuestionGeneration(lastUserContent, scope)
+    const mathDataset = isMathQuery ? await loadMathDataset() : null
+
+    if (wantsGeneratedMathQuestions && mathDataset && mathDataset.length > 0) {
+      const requestedCount = extractRequestedCount(lastUserContent)
+      const rankedItems = [...mathDataset]
+        .map((item) => ({ item, score: scoreItemAgainstQuery(item, lastUserContent) }))
+        .sort((left, right) => right.score - left.score)
+
+      const picked = rankedItems.slice(0, requestedCount).map((entry) => entry.item)
+
+      return NextResponse.json({
+        message: formatMathQuestions(picked),
+      })
+    }
+
+    const dsLimit = activePlan.id === "university" ? 3 : activePlan.id === "master" ? 2 : 1
+    const excerptLen = activePlan.id === "university" ? 240 : activePlan.id === "master" ? 180 : 120
+    const relevantExtracts = await findRelevantDatasetExtracts(lastUserContent, dsLimit, excerptLen, mathDataset || undefined)
+    const datasetContext = relevantExtracts && relevantExtracts.length > 0
+      ? [
+          isMathQuery
+            ? "Contexto del dataset de Matemáticas (usa estas preguntas como fuente prioritaria):"
+            : "Contexto del dataset (extractos relevantes):",
+          "",
+        ].concat(relevantExtracts.map((r: any, i: number) => `${i + 1}. ${r.excerpt}`)).join("\n\n")
+      : null
 
     const formattedMessages = [
       {
         role: "system",
-        content: SYSTEM_PROMPT + (scopePrompt ? `\n\n${scopePrompt}` : "") + (profilePrompt ? `\n\n${profilePrompt}` : ""),
+        content:
+          SYSTEM_PROMPT +
+          `\n\nPlan activo: ${activePlan.name}.` +
+          `\n\n${planPrompt}` +
+          (scopePrompt ? `\n\n${scopePrompt}` : "") +
+          (profilePrompt ? `\n\n${profilePrompt}` : "") +
+          (isMathQuery
+            ? "\n\nSi el usuario pide ejercicios, preguntas o simulacros de Matemáticas, prioriza estrictamente el dataset local de Matemáticas y no inventes preguntas fuera de esa base."
+            : ""),
       },
+      ...(datasetContext ? [{ role: "system", content: datasetContext }] : []),
       ...messages.map((msg: Message) => ({
         role: msg.role,
         content: msg.content,
       })),
     ]
 
-    // Llamar a la API de Groq
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${groqApiKey}`,
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: formattedMessages,
-        temperature: 0.22,
-        max_tokens: 900,
-        top_p: 1,
-        stream: false,
-      }),
-    })
-
-    if (!response.ok) {
-      const errorData = await response.text()
-      console.error("Error de Groq API:", errorData)
-      throw new Error(`Error de Groq API: ${response.status}`)
+    // Llamar a la API de Groq con reintentos en caso de rate limit / errores 5xx
+    const payload = {
+      model: "llama-3.3-70b-versatile",
+      messages: formattedMessages,
+      temperature: activePlan.id === "university" ? 0.18 : 0.22,
+      max_tokens: activePlan.id === "university" ? 1000 : 700,
+      top_p: 1,
+      stream: false,
     }
 
-    const data = await response.json()
-    const assistantMessage = data.choices[0]?.message?.content
+    let data: any
+    try {
+      data = await callGroqWithRetries(groqApiKey, payload, 4)
+    } catch (err) {
+      console.error("Error de Groq API (reintentos):", err)
+      throw err
+    }
+
+    const assistantMessage = data.choices?.[0]?.message?.content
 
     if (!assistantMessage) {
       throw new Error("No se recibió respuesta del modelo")

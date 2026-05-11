@@ -9,6 +9,7 @@ export interface Resource {
   category: string;
   _createdAt: string;
   size?: string;
+  description?: string | null;
 }
 
 export async function getResources(): Promise<Resource[]> {
@@ -21,7 +22,8 @@ export async function getResources(): Promise<Resource[]> {
     _createdAt,
     "fileUrl": file.asset->url,
     "extension": file.asset->extension,
-    "size": file.asset->size
+    "size": file.asset->size,
+    "description": file.description
   }`;
 
   try {

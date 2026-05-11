@@ -24,6 +24,7 @@ interface Resource {
   category: string
   _createdAt: string
   size?: string
+  description?: string | null
 }
 
 export default function ResourcesClient({ initialResources }: { initialResources: Resource[] }) {
@@ -87,10 +88,16 @@ export default function ResourcesClient({ initialResources }: { initialResources
                 </div>
 
                 <div className="relative z-10">
-                  <h3 className="text-xl font-bold mb-3 leading-tight tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  <h3 className="text-xl font-bold mb-2 leading-tight tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     {resource.title}
                   </h3>
-                  
+
+                  {resource.description && (
+                    <p className="mt-1 text-sm text-slate-600 dark:text-white/60 line-clamp-2 font-sans mb-4">
+                      {resource.description}
+                    </p>
+                  )}
+
                   <p className="text-[12px] font-medium text-muted-foreground/80 mb-8 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500/40" />
                     {new Date(resource._createdAt).toLocaleDateString('es-ES', {

@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "index:exams": "node scripts/exam_indexer.js",
+    "index:exams:quick": "node scripts/exam_quick_indexer.js",
+    "fetch:math": "node scripts/fetch_math_questions_example.js",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",

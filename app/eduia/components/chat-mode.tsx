@@ -7,6 +7,7 @@ import { motion as motionBase, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { downloadPracticeExamPdf } from "@/lib/practice-exam-pdf"
 import GoogleSignIn from "@/components/google-signin"
+import { getEduIAPlan, type EduIAPlanId } from "@/lib/eduia-plans"
 
 const motion = motionBase as any
 import { MarkdownRenderer } from "./markdown-renderer"
@@ -21,6 +22,7 @@ interface Message {
 interface ChatModeProps {
   sessionId: string
   conversationId: string | null
+  selectedPlanId: EduIAPlanId
   onConversationSaved: (conversationId?: string | null) => void
   onDeleteConversation?: (conversationId: string, title?: string) => void
 }
@@ -230,8 +232,9 @@ const ITINERARY_LABELS: Record<Itinerary, string> = {
   eso: "Refuerzo de ESO",
 }
 
-export function ChatMode({ sessionId, conversationId, onConversationSaved, onDeleteConversation }: ChatModeProps) {
+export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversationSaved, onDeleteConversation }: ChatModeProps) {
   const { data: session, status } = useSession()
+  const activePlan = getEduIAPlan(selectedPlanId)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -780,7 +783,7 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved, onDel
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: updatedMessages, scope: selectedScope, userProfile }),
+        body: JSON.stringify({ messages: updatedMessages, scope: selectedScope, userProfile, planId: selectedPlanId }),
       })
       const data = await response.json()
       const final = [...updatedMessages, { role: "assistant", content: data.message, timestamp: new Date() } as Message]
@@ -908,6 +911,11 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved, onDel
                   <h3 className="text-2xl font-bold mb-2">¡Hola! Soy Acceso IA 👋</h3>
                   <p className="text-sm opacity-75 mb-1 max-w-md mx-auto">Tu tutora personal para preparar pruebas de acceso a FP y reforzar los ámbitos clave de Grado Básico y ESO.</p>
                   <p className="text-sm opacity-55 max-w-md mx-auto">Elige qué quieres preparar y empieza con práctica, resolución de dudas o simulacros adaptados a tu nivel.</p>
+                  <div className="mt-4 inline-flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-white/60 bg-white/70 px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/60 dark:text-slate-200">
+                    <span className={cn("rounded-full bg-gradient-to-r px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-white", activePlan.id === "university" ? "from-cyan-500 to-blue-600" : activePlan.id === "master" ? "from-amber-400 to-red-500" : "from-fuchsia-500 to-pink-500")}>{activePlan.name}</span>
+                    <span>{activePlan.tagline}</span>
+                    {activePlan.id === "university" ? <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-cyan-700 dark:border-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-300">Thinking</span> : null}
+                  </div>
                 </div>
 
                 {renderWelcomeScreen()}
@@ -931,7 +939,7 @@ export function ChatMode({ sessionId, conversationId, onConversationSaved, onDel
             {isLoading && (
               <div className="w-full flex justify-start">
                 <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-purple-600" /><span className="text-sm opacity-60">Razonando...</span>
+                  <Loader2 className="w-4 h-4 animate-spin text-purple-600" /><span className="text-sm opacity-60">{selectedPlanId === "university" ? "Thinking en profundidad..." : "Razonando..."}</span>
                 </div>
               </div>
             )}
