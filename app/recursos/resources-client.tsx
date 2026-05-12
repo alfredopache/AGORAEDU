@@ -3,17 +3,16 @@
 import { useState } from 'react'
 import { 
   FileText, 
-  FileVideo, 
   Image as ImageIcon, 
   File as FileGeneric, 
   Download, 
   Search,
   ExternalLink,
-  FileCode
+  FileCode,
+  User,
+  Facebook
 } from 'lucide-react'
-import { motion as motionBase, AnimatePresence } from 'framer-motion'
-
-const motion = motionBase as any
+import { motion, AnimatePresence } from 'framer-motion'
 
 export const dynamic = 'force-dynamic'
 interface Resource {
@@ -25,6 +24,7 @@ interface Resource {
   _createdAt: string
   size?: string
   description?: string | null
+  author?: string | null
 }
 
 export default function ResourcesClient({ initialResources }: { initialResources: Resource[] }) {
@@ -63,6 +63,7 @@ export default function ResourcesClient({ initialResources }: { initialResources
         <AnimatePresence mode='popLayout'>
           {filteredResources.map((resource) => {
             const config = getFileConfig(resource.extension)
+
             return (
               <motion.div
                 key={resource._id}
@@ -93,19 +94,17 @@ export default function ResourcesClient({ initialResources }: { initialResources
                   </h3>
 
                   {resource.description && (
-                    <p className="mt-1 text-sm text-slate-600 dark:text-white/60 line-clamp-2 font-sans mb-4">
+                    <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-white/60 line-clamp-3 font-sans mb-5">
                       {resource.description}
                     </p>
                   )}
 
-                  <p className="text-[12px] font-medium text-muted-foreground/80 mb-8 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500/40" />
-                    {new Date(resource._createdAt).toLocaleDateString('es-ES', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric'
-                    })}
-                  </p>
+                  {resource.author && (
+                    <p className="text-[13px] font-medium text-slate-600 dark:text-white/65 flex items-center gap-2 mb-8">
+                      <User className="h-3.5 w-3.5 text-blue-500/80" />
+                      <span>Autor: {resource.author}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div className="mt-auto flex items-center gap-3 relative z-10">
@@ -123,6 +122,16 @@ export default function ResourcesClient({ initialResources }: { initialResources
                     className="p-3.5 rounded-2xl border border-white/40 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-700 transition-all backdrop-blur-sm"
                   >
                     <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                  </a>
+                  <a
+                    href="https://www.facebook.com/agoraedu"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Visitar Facebook de AgoraEDU"
+                    title="AgoraEDU en Facebook"
+                    className="p-3.5 rounded-2xl border border-white/40 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-700 transition-all backdrop-blur-sm"
+                  >
+                    <Facebook className="h-4 w-4 text-muted-foreground" />
                   </a>
                 </div>
               </motion.div>

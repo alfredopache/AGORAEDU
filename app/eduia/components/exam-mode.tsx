@@ -154,6 +154,11 @@ export function ExamMode({ sessionId }: ExamModeProps) {
   const [score, setScore] = useState<number>(0)
   const [analysis, setAnalysis] = useState<any>(null)
 
+  const shouldUseWrittenAnswer = (question?: ExamQuestion | null) => {
+    const subjectHint = `${selectedSubject || ""} ${question?.subject || ""}`.toLowerCase()
+    return /matem/.test(subjectHint)
+  }
+
   useEffect(() => {
     if (examState === "taking" && questionStartTime === 0) {
       setQuestionStartTime(Date.now())
@@ -800,6 +805,36 @@ export function ExamMode({ sessionId }: ExamModeProps) {
                         : null
                       const useMatchUI = matchPairs && isMatchingQuestion(currentQuestion.question, currentQuestion.topic)
 
+                      const forceWrittenAnswer = shouldUseWrittenAnswer(currentQuestion)
+
+                      if (forceWrittenAnswer) {
+                        return (
+                          <div className="space-y-3">
+                            <textarea
+                              value={openAnswer}
+                              onChange={(e) => setOpenAnswer(clampRedactionText(e.target.value, MAX_REDACTION_WORDS, MAX_REDACTION_LINES))}
+                              placeholder="Escribe tú la respuesta completa aquí..."
+                              rows={8}
+                              className="w-full min-h-[120px] p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                            />
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <p className="text-sm text-slate-500 dark:text-slate-400">
+                                {openAnswerWordCount}/{MAX_REDACTION_WORDS} palabras · {openAnswerLineCount}/{MAX_REDACTION_LINES} líneas
+                              </p>
+                              <div className="flex justify-end">
+                                <button
+                                  onClick={() => handleOpenSubmit(openAnswer)}
+                                  disabled={!isOpenAnswerValid}
+                                  className="px-6 py-2 rounded-lg bg-purple-600 text-white disabled:opacity-50"
+                                >
+                                  Enviar respuesta
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      }
+
                       if (useMatchUI && matchPairs) {
                         return (
                           <CableMatch
@@ -914,8 +949,9 @@ export function ExamMode({ sessionId }: ExamModeProps) {
   // RESULTS VIEW
   if (examState === "results") {
     const correctCount = userAnswers.filter((a) => a.isCorrect).length
-    const gradedCount = questions.filter((q) => Array.isArray(q.options) && q.options.length > 0).length
+    const gradedCount = userAnswers.filter((a) => typeof a.isCorrect === "boolean").length
     const incorrectCount = Math.max(0, gradedCount - correctCount)
+    const pendingReviewCount = userAnswers.filter((a) => typeof a.isCorrect === "undefined").length
     const avgTime = Math.round(totalTime / Math.max(questions.length, 1))
 
     return (
@@ -934,6 +970,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
               transition={{ type: "spring", bounce: 0.5 }}
               className={cn(
                 "inline-block p-8 rounded-full mb-6",
+                gradedCount === 0 && pendingReviewCount > 0 ? "bg-gradient-to-br from-amber-400 to-orange-500" :
                 score >= 80 ? "bg-gradient-to-br from-green-400 to-emerald-500" :
                 score >= 60 ? "bg-gradient-to-br from-yellow-400 to-orange-500" :
                 "bg-gradient-to-br from-red-400 to-pink-500"
@@ -942,10 +979,11 @@ export function ExamMode({ sessionId }: ExamModeProps) {
               <Trophy className="w-20 h-20 text-white" />
             </motion.div>
             <h2 className="text-5xl font-bold text-slate-900 dark:text-white mb-3">
-              {score}%
+              {gradedCount === 0 && pendingReviewCount > 0 ? "Pendiente" : `${score}%`}
             </h2>
             <p className="text-xl text-slate-600 dark:text-slate-400">
-              {score >= 80 ? "¡Excelente trabajo! 🎉" :
+              {gradedCount === 0 && pendingReviewCount > 0 ? "Tus respuestas requieren corrección manual." :
+               score >= 80 ? "¡Excelente trabajo! 🎉" :
                score >= 60 ? "¡Buen intento! 👍" :
                "Sigue practicando 💪"}
             </p>
@@ -967,6 +1005,14 @@ export function ExamMode({ sessionId }: ExamModeProps) {
               </div>
               <p className="text-3xl font-bold text-slate-900 dark:text-white">{incorrectCount}</p>
               <p className="text-sm text-slate-600 dark:text-slate-400">Incorrectas</p>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-lg">
+              <div className="text-amber-600 dark:text-amber-400 mb-2">
+                <BookOpen className="w-8 h-8" />
+              </div>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white">{pendingReviewCount}</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Pendientes de revisión</p>
             </div>
 
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-lg">
@@ -1053,19 +1099,24 @@ export function ExamMode({ sessionId }: ExamModeProps) {
               {questions.map((question, qIndex) => {
                 const userAnswer = userAnswers[qIndex]
                 const isCorrect = userAnswer?.isCorrect
+                const answeredManually = typeof userAnswer?.selectedOption === "string" && typeof userAnswer?.isCorrect === "undefined"
 
                 return (
                   <div
                     key={qIndex}
                     className={cn(
                       "p-6 rounded-2xl border-2",
-                      isCorrect
+                      answeredManually
+                        ? "bg-amber-50 dark:bg-amber-900/10 border-amber-300 dark:border-amber-500/30"
+                        : isCorrect
                         ? "bg-green-50 dark:bg-green-900/10 border-green-300 dark:border-green-500/30"
                         : "bg-red-50 dark:bg-red-900/10 border-red-300 dark:border-red-500/30"
                     )}
                   >
                     <div className="flex items-start gap-3 mb-4">
-                      {isCorrect ? (
+                      {answeredManually ? (
+                        <BookOpen className="w-6 h-6 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-1" />
+                      ) : isCorrect ? (
                         <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0 mt-1" />
                       ) : (
                         <XCircle className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-1" />
@@ -1077,7 +1128,13 @@ export function ExamMode({ sessionId }: ExamModeProps) {
 
                         {/* Opciones */}
                         <div className="space-y-2">
-                          {Array.isArray(question.options) && question.options.length > 0 ? (
+                          {answeredManually ? (
+                            <div className="p-4 rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-100/60 dark:bg-amber-900/20">
+                              <p className="text-sm font-semibold text-amber-900 dark:text-amber-300">Tu respuesta escrita</p>
+                              <p className="mt-2 text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{String(userAnswer?.selectedOption ?? "— Sin respuesta")}</p>
+                              <p className="mt-3 text-xs text-amber-800 dark:text-amber-300">Pendiente de corrección manual.</p>
+                            </div>
+                          ) : Array.isArray(question.options) && question.options.length > 0 ? (
                             question.options.map((option, oIndex) => {
                               const wasSelected = userAnswer?.selectedOption === oIndex
                               const isCorrectOption = option.isCorrect

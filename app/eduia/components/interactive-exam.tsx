@@ -56,6 +56,7 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
   const [isLoading, setIsLoading] = useState(true)
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
   const [openAnswer, setOpenAnswer] = useState<string>("")
+  const [forceOpenMode, setForceOpenMode] = useState<boolean>(false)
 
   const GM_PDFS: Record<string, string> = {
     '2017': 'https://ceice.gva.es/documents/388109149/391038839/GM_2017.pdf',
@@ -113,6 +114,9 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
         setSelectedOption(null)
         setOpenAnswer("")
 
+        // Activar por defecto el modo de respuesta abierta para Matemáticas
+        setForceOpenMode(Boolean(config.subject && /matem/i.test(config.subject)))
+
         const params = new URLSearchParams({
           subject: config.subject,
           difficulty: config.difficulty,
@@ -146,6 +150,13 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
     // resetear contador para la pregunta actual
     setTimeLeft(config.timePerQuestion || 60)
     setQuestionStartTime(Date.now())
+    // Forzar respuesta abierta si la configuración o la pregunta actual son de Matemáticas
+    const currentQ = questions && questions.length > 0 ? questions[currentQuestionIndex] : null
+    const isConfigMath = Boolean(config.subject && /matem/i.test(String(config.subject)))
+    const isQuestionMath = Boolean(currentQ && currentQ.subject && /matem/i.test(String(currentQ.subject)))
+    setForceOpenMode(isConfigMath || isQuestionMath)
+    setOpenAnswer("")
+    setSelectedOption(null)
 
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
@@ -163,7 +174,7 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
 
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentQuestionIndex, questions])
+  }, [currentQuestionIndex, questions, config.subject])
 
   const handleOptionSelect = (optionIndex: number) => {
     if (selectedOption !== null) return // Ya seleccionó una respuesta
@@ -205,7 +216,8 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
     if (selectedOption !== null || !text.trim()) return
 
     const newAnswers = [...userAnswers, text]
-    setSelectedOption(0)
+    // marcar con un valor numérico distinto para indicar respuesta abierta (no coincidente con índices de opciones)
+    setSelectedOption(-1)
     setUserAnswers(newAnswers)
 
     if (currentQuestionIndex < questions.length - 1) {
@@ -428,62 +440,97 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
                       </div>
                     </div>
                   ) : (
-                    currentQuestion.options.map((option, index) => {
-                    const isSelected = selectedOption === index
-                    const isCorrect = option.isCorrect
-                    const showResult = selectedOption !== null
+                    // Pregunta cerrada con opciones: permitir modo opcional de "escribir respuesta"
+                    <div className="space-y-3">
+                      {!forceOpenMode ? (
+                        <>
+                          {currentQuestion.options.map((option, index) => {
+                            const isSelected = selectedOption === index
+                            const isCorrect = option.isCorrect
+                            const showResult = selectedOption !== null
 
-                    return (
-                      <motion.button
-                        key={index}
-                        onClick={() => handleOptionSelect(index)}
-                        disabled={selectedOption !== null}
-                        whileHover={selectedOption === null ? { scale: 1.02 } : {}}
-                        whileTap={selectedOption === null ? { scale: 0.98 } : {}}
-                        className={cn(
-                          "w-full text-left p-5 rounded-xl border-2 transition-all duration-300 flex items-center gap-4 pointer-events-auto",
-                          selectedOption === null && "hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer",
-                          !showResult && "bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600",
-                          showResult && isSelected && isCorrect && "bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-400",
-                          showResult && isSelected && !isCorrect && "bg-red-50 dark:bg-red-900/20 border-red-500 dark:border-red-400",
-                          showResult && !isSelected && isCorrect && "bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-400",
-                          showResult && !isSelected && !isCorrect && "opacity-40",
-                          selectedOption !== null && "cursor-not-allowed"
-                        )}
-                      >
-                        <div className={cn(
-                          "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm",
-                          !showResult && "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300",
-                          showResult && isSelected && isCorrect && "bg-green-500 text-white",
-                          showResult && isSelected && !isCorrect && "bg-red-500 text-white",
-                          showResult && !isSelected && isCorrect && "bg-green-500 text-white",
-                        )}>
-                          {String.fromCharCode(65 + index)}
+                            return (
+                              <motion.button
+                                key={index}
+                                onClick={() => handleOptionSelect(index)}
+                                disabled={selectedOption !== null}
+                                whileHover={selectedOption === null ? { scale: 1.02 } : {}}
+                                whileTap={selectedOption === null ? { scale: 0.98 } : {}}
+                                className={cn(
+                                  "w-full text-left p-5 rounded-xl border-2 transition-all duration-300 flex items-center gap-4 pointer-events-auto",
+                                  selectedOption === null && "hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer",
+                                  !showResult && "bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600",
+                                  showResult && isSelected && isCorrect && "bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-400",
+                                  showResult && isSelected && !isCorrect && "bg-red-50 dark:bg-red-900/20 border-red-500 dark:border-red-400",
+                                  showResult && !isSelected && isCorrect && "bg-green-50 dark:bg-green-900/20 border-green-500 dark:border-green-400",
+                                  showResult && !isSelected && !isCorrect && "opacity-40",
+                                  selectedOption !== null && "cursor-not-allowed"
+                                )}
+                              >
+                                <div className={cn(
+                                  "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm",
+                                  !showResult && "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300",
+                                  showResult && isSelected && isCorrect && "bg-green-500 text-white",
+                                  showResult && isSelected && !isCorrect && "bg-red-500 text-white",
+                                  showResult && !isSelected && isCorrect && "bg-green-500 text-white",
+                                )}>
+                                  {String.fromCharCode(65 + index)}
+                                </div>
+                                
+                                <span className={cn(
+                                  "flex-1 text-base",
+                                  !showResult && "text-slate-700 dark:text-slate-300",
+                                  showResult && isSelected && isCorrect && "text-green-900 dark:text-green-100 font-semibold",
+                                  showResult && isSelected && !isCorrect && "text-red-900 dark:text-red-100 font-semibold",
+                                  showResult && !isSelected && isCorrect && "text-green-900 dark:text-green-100 font-semibold",
+                                )}>
+                                  {option.text}
+                                </span>
+
+                                {showResult && isSelected && isCorrect && (
+                                  <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0" />
+                                )}
+                                {showResult && isSelected && !isCorrect && (
+                                  <XCircle className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0" />
+                                )}
+                                {showResult && !isSelected && isCorrect && (
+                                  <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0" />
+                                )}
+                              </motion.button>
+                            )
+                          })}
+
+                          <div className="flex justify-end mt-2">
+                            <button type="button" onClick={() => setForceOpenMode(true)} className="text-sm text-slate-600 hover:underline">Escribir mi respuesta</button>
+                          </div>
+                        </>
+                      ) : (
+                        // Modo abierto forzado para preguntas cerradas
+                        <div className="space-y-3">
+                          <textarea
+                            value={openAnswer}
+                            onChange={(e) => setOpenAnswer(clampRedactionText(e.target.value, MAX_REDACTION_WORDS, MAX_REDACTION_LINES))}
+                            placeholder="Escribe tu respuesta aquí..."
+                            rows={8}
+                            className="w-full min-h-[120px] p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                          />
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{openAnswerWordCount}/{MAX_REDACTION_WORDS} palabras</p>
+                            <div className="flex gap-2">
+                              <button type="button" onClick={() => setForceOpenMode(false)} className="px-4 py-2 rounded-lg border">Volver a opciones</button>
+                              <button
+                                onClick={() => { handleOpenSubmit(openAnswer); }}
+                                disabled={!isOpenAnswerValid}
+                                className="px-6 py-2 rounded-lg bg-purple-600 text-white disabled:opacity-50"
+                              >
+                                Enviar respuesta
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                        
-                        <span className={cn(
-                          "flex-1 text-base",
-                          !showResult && "text-slate-700 dark:text-slate-300",
-                          showResult && isSelected && isCorrect && "text-green-900 dark:text-green-100 font-semibold",
-                          showResult && isSelected && !isCorrect && "text-red-900 dark:text-red-100 font-semibold",
-                          showResult && !isSelected && isCorrect && "text-green-900 dark:text-green-100 font-semibold",
-                        )}>
-                          {option.text}
-                        </span>
-
-                        {showResult && isSelected && isCorrect && (
-                          <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0" />
-                        )}
-                        {showResult && isSelected && !isCorrect && (
-                          <XCircle className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0" />
-                        )}
-                        {showResult && !isSelected && isCorrect && (
-                          <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0" />
-                        )}
-                      </motion.button>
-                    )
-                  })
-                )}
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Fuente (detalle) */}
