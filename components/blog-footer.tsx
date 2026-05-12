@@ -1,4 +1,4 @@
-import { Instagram, Mail, Youtube, Music } from 'lucide-react'
+import { Instagram, Mail, Youtube, Music, Facebook } from 'lucide-react'
 import Image from 'next/image'
 
 export function BlogFooter() {
@@ -25,6 +25,16 @@ export function BlogFooter() {
           </div>
           
           <div className="flex items-center gap-4">
+            <a 
+              href="https://www.facebook.com/agoraedu"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground hover:text-blue-600 transition-colors"
+              aria-label="Facebook"
+            >
+              <Facebook className="w-5 h-5" />
+            </a>
+
             <a 
               href="https://instagram.com/agoraedu__"
               target="_blank"

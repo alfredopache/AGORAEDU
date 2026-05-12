@@ -1,0 +1,63 @@
+{
+  "generatedAt": "2026-05-12T08:43:05.848Z",
+  "subject": "matematicas",
+  "label": "Matemáticas",
+  "scope": "ambito_cientifico",
+  "count": 9,
+  "items": [
+    {
+      "filename": "Matematicas 17.pdf",
+      "path": "data/asignaturas/Matematicas 17.pdf",
+      "topic": "Matematicas 17",
+      "sizeKb": 164
+    },
+    {
+      "filename": "Matemáticas 19.pdf",
+      "path": "data/asignaturas/Matemáticas 19.pdf",
+      "topic": "Matemáticas 19",
+      "sizeKb": 107
+    },
+    {
+      "filename": "Matemáticas_18.pdf",
+      "path": "data/asignaturas/Matemáticas_18.pdf",
+      "topic": "Matemáticas 18",
+      "sizeKb": 366
+    },
+    {
+      "filename": "Matemáticas_20.pdf",
+      "path": "data/asignaturas/Matemáticas_20.pdf",
+      "topic": "Matemáticas 20",
+      "sizeKb": 153
+    },
+    {
+      "filename": "Matemáticas_21.pdf",
+      "path": "data/asignaturas/Matemáticas_21.pdf",
+      "topic": "Matemáticas 21",
+      "sizeKb": 129
+    },
+    {
+      "filename": "Matemáticas_22.pdf",
+      "path": "data/asignaturas/Matemáticas_22.pdf",
+      "topic": "Matemáticas 22",
+      "sizeKb": 120
+    },
+    {
+      "filename": "Matemáticas_23.pdf",
+      "path": "data/asignaturas/Matemáticas_23.pdf",
+      "topic": "Matemáticas 23",
+      "sizeKb": 103
+    },
+    {
+      "filename": "Matemáticas_24.pdf",
+      "path": "data/asignaturas/Matemáticas_24.pdf",
+      "topic": "Matemáticas 24",
+      "sizeKb": 168
+    },
+    {
+      "filename": "Matemáticas_25.pdf",
+      "path": "data/asignaturas/Matemáticas_25.pdf",
+      "topic": "Matemáticas 25",
+      "sizeKb": 190
+    }
+  ]
+}

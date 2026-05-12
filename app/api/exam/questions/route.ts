@@ -28,8 +28,14 @@ export async function GET(request: NextRequest) {
       if (m.includes('matem')) return 'matematicas'
       if (m.includes('ingl')) return 'ingles'
       if (m.includes('leng')) return 'lengua'
-      if (m.includes('hist') || m.includes('geogr') || m.includes('social')) return 'sociales'
-      if (m.includes('natur') || m.includes('cienc')) return 'sociales'
+      if (m.includes('hist') || m.includes('geogr') || m.includes('social') ||
+          m.includes('opcion a') || m.includes('opción a') || m.includes('humanid') ||
+          m.includes('econom') || m.includes('empresa')) return 'sociales'
+      if (m.includes('natur') || m.includes('biolog') || m.includes('quím') || m.includes('quim') ||
+          m.includes('opcion c') || m.includes('opción c')) return 'ciencias'
+      if (m.includes('tic') || m.includes('tid') || m.includes('tractament') ||
+          m.includes('tratamiento de la inform') || m.includes('digital') ||
+          m.includes('tecnolog') || m.includes('opcion b') || m.includes('opción b')) return 'tic'
       return 'general'
     }
 

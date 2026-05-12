@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+
 import { getEduIAPlan } from "@/lib/eduia-plans"
 import { promises as fs } from "fs"
 import path from "path"
@@ -25,7 +26,7 @@ interface IncomingUserProfile {
 const SYSTEM_PROMPT = `# ROL Y MISIÓN PRINCIPAL
 Eres la tutora pedagógica de Acceso IA. Tu misión es preparar a los usuarios para superar pruebas de acceso, FP, Grado Básico y refuerzo de ESO. Actúas con la claridad de un orientador educativo, la lógica de un profesor y el apoyo estratégico de un coach de estudio.
 
-Tu conocimiento se basa estrictamente en un dataset cerrado de 232 ítems (histórico 2017-2025). Tienes prohibido inventar preguntas o temarios fuera de esta base de datos.
+Tu conocimiento se basa en un dataset principal de 232 ítems (histórico 2017-2025) y en exámenes oficiales en PDF de 7 asignaturas de acceso (Matemáticas, Inglés, Lengua y Literatura, TID, Opción A – Humanidades/CC. Sociales, Opción B – Tecnología, Opción C – Ciencias). Tienes prohibido inventar preguntas o temarios fuera de estas bases de datos.
 
 Debes dar respuestas directas, estructuradas y con sentido. Evita textos gigantescos y redundantes. Cuando el alumno pide un ejercicio o explicación, usa pasos numerados, listas o bloques cortos.
 
@@ -131,6 +132,47 @@ let DATASET_CACHE: any[] | null = null
 let MATH_DATASET_CACHE: any[] | null = null
 const DATASET_PATH = path.join(process.cwd(), "data", "W5_dataset_ACCESO_IA_examenes_2017_2025_v3_GOLD_INFRA_READY.json")
 const MATH_DATASET_PATH = path.join(process.cwd(), "data", "asignaturas", "math_questions_from_dataset.json")
+
+interface SubjectIndexEntry {
+  label: string
+  scope: string
+  count: number
+  indexFile: string
+  topics: string[]
+}
+interface SubjectMasterIndex {
+  generatedAt: string
+  subjects: Record<string, SubjectIndexEntry>
+}
+let SUBJECT_INDEX_CACHE: SubjectMasterIndex | null = null
+const SUBJECT_INDEX_PATH = path.join(process.cwd(), "data", "asignaturas", "index.json")
+
+async function loadSubjectIndex(): Promise<SubjectMasterIndex | null> {
+  if (SUBJECT_INDEX_CACHE) return SUBJECT_INDEX_CACHE
+  try {
+    const raw = await fs.readFile(SUBJECT_INDEX_PATH, "utf8")
+    SUBJECT_INDEX_CACHE = JSON.parse(raw) as SubjectMasterIndex
+    return SUBJECT_INDEX_CACHE
+  } catch {
+    return null
+  }
+}
+
+function buildSubjectIndexContext(index: SubjectMasterIndex): string {
+  const lines: string[] = [
+    'Exámenes oficiales en PDF disponibles por asignatura (120 PDFs, histórico oficial):',
+    '',
+  ]
+  for (const [, info] of Object.entries(index.subjects)) {
+    lines.push(`- ${info.label}: ${info.count} PDFs`)
+    if (info.topics.length > 0) {
+      lines.push(`  Subtemas/ejercicios: ${info.topics.slice(0, 5).join(', ')}`)
+    }
+  }
+  lines.push('')
+  lines.push('Cuando el alumno pregunte por cualquiera de estas asignaturas, confirma que dispones de exámenes oficiales y guíale con el contenido real del histórico.')
+  return lines.join('\n')
+}
 
 async function loadLocalDataset(): Promise<any[]> {
   if (DATASET_CACHE) return DATASET_CACHE
@@ -436,6 +478,7 @@ export async function POST(request: NextRequest) {
     const isMathQuery = isMathRelatedQuery(lastUserContent, scope)
     const wantsGeneratedMathQuestions = wantsMathQuestionGeneration(lastUserContent, scope)
     const mathDataset = isMathQuery ? await loadMathDataset() : null
+    const subjectIndex = await loadSubjectIndex()
 
     if (wantsGeneratedMathQuestions && mathDataset && mathDataset.length > 0) {
       const requestedCount = extractRequestedCount(lastUserContent)
@@ -475,6 +518,7 @@ export async function POST(request: NextRequest) {
             ? "\n\nSi el usuario pide ejercicios, preguntas o simulacros de Matemáticas, prioriza estrictamente el dataset local de Matemáticas y no inventes preguntas fuera de esa base."
             : ""),
       },
+      ...(subjectIndex ? [{ role: "system", content: buildSubjectIndexContext(subjectIndex) }] : []),
       ...(datasetContext ? [{ role: "system", content: datasetContext }] : []),
       ...messages.map((msg: Message) => ({
         role: msg.role,

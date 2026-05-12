@@ -1,0 +1,63 @@
+{
+  "generatedAt": "2026-05-12T08:43:05.796Z",
+  "subject": "ingles",
+  "label": "Inglés",
+  "scope": "ambito_linguistico",
+  "count": 9,
+  "items": [
+    {
+      "filename": "A2 INGLES.pdf",
+      "path": "data/asignaturas/Ingles/A2 INGLES.pdf",
+      "topic": "A2 INGLES",
+      "sizeKb": 154
+    },
+    {
+      "filename": "Lengua extrangera ingles.pdf",
+      "path": "data/asignaturas/Ingles/Lengua extrangera ingles.pdf",
+      "topic": "Lengua extrangera ingles",
+      "sizeKb": 169
+    },
+    {
+      "filename": "Lengua extranjera ingles.pdf",
+      "path": "data/asignaturas/Ingles/Lengua extranjera ingles.pdf",
+      "topic": "Lengua extranjera ingles",
+      "sizeKb": 121
+    },
+    {
+      "filename": "Parte común inglés (2).pdf",
+      "path": "data/asignaturas/Ingles/Parte común inglés (2).pdf",
+      "topic": "Parte Común",
+      "sizeKb": 144
+    },
+    {
+      "filename": "Parte común inglés (3).pdf",
+      "path": "data/asignaturas/Ingles/Parte común inglés (3).pdf",
+      "topic": "Parte Común",
+      "sizeKb": 112
+    },
+    {
+      "filename": "Parte comun ingles.pdf",
+      "path": "data/asignaturas/Ingles/Parte comun ingles.pdf",
+      "topic": "Parte Común",
+      "sizeKb": 147
+    },
+    {
+      "filename": "Parte comun inglés.pdf",
+      "path": "data/asignaturas/Ingles/Parte comun inglés.pdf",
+      "topic": "Parte Común",
+      "sizeKb": 267
+    },
+    {
+      "filename": "Parte común inglés.pdf",
+      "path": "data/asignaturas/Ingles/Parte común inglés.pdf",
+      "topic": "Parte Común",
+      "sizeKb": 126
+    },
+    {
+      "filename": "Parte común Lengua extranjera ingles.pdf",
+      "path": "data/asignaturas/Ingles/Parte común Lengua extranjera ingles.pdf",
+      "topic": "Parte Común",
+      "sizeKb": 75
+    }
+  ]
+}

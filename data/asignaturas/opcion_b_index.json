@@ -1,0 +1,141 @@
+{
+  "generatedAt": "2026-05-12T08:43:05.862Z",
+  "subject": "opcion_b",
+  "label": "Opción B – Tecnología (GS)",
+  "scope": "ambito_cientifico",
+  "count": 22,
+  "items": [
+    {
+      "filename": "OPCION B TECNOLIGIA FISICA Y QUIMICA.pdf",
+      "path": "data/asignaturas/Opcion B/OPCION B TECNOLIGIA FISICA Y QUIMICA.pdf",
+      "topic": "Física y Química",
+      "sizeKb": 167
+    },
+    {
+      "filename": "OPCION B TECNOLOGIA DIBUJO TECNICO.pdf",
+      "path": "data/asignaturas/Opcion B/OPCION B TECNOLOGIA DIBUJO TECNICO.pdf",
+      "topic": "Tecnología Industrial",
+      "sizeKb": 190
+    },
+    {
+      "filename": "OPCION B TECNOLOGIA INDUSTRIAL.pdf",
+      "path": "data/asignaturas/Opcion B/OPCION B TECNOLOGIA INDUSTRIAL.pdf",
+      "topic": "Tecnología Industrial",
+      "sizeKb": 185
+    },
+    {
+      "filename": "Part específica a dibuix técnic.pdf",
+      "path": "data/asignaturas/Opcion B/Part específica a dibuix técnic.pdf",
+      "topic": "Dibujo Técnico",
+      "sizeKb": 182
+    },
+    {
+      "filename": "Part específica B fisica i quimica.pdf",
+      "path": "data/asignaturas/Opcion B/Part específica B fisica i quimica.pdf",
+      "topic": "Física y Química",
+      "sizeKb": 137
+    },
+    {
+      "filename": "Part específica B tecnologia industrial.pdf",
+      "path": "data/asignaturas/Opcion B/Part específica B tecnologia industrial.pdf",
+      "topic": "Tecnología Industrial",
+      "sizeKb": 270
+    },
+    {
+      "filename": "Parte especifica B Tecnoligia industrial.pdf",
+      "path": "data/asignaturas/Opcion B/Parte especifica B Tecnoligia industrial.pdf",
+      "topic": "Tecnología Industrial",
+      "sizeKb": 241
+    },
+    {
+      "filename": "Parte específica B tecnología industrial (2).pdf",
+      "path": "data/asignaturas/Opcion B/Parte específica B tecnología industrial (2).pdf",
+      "topic": "Tecnología Industrial",
+      "sizeKb": 134
+    },
+    {
+      "filename": "Parte específica B tecnología industrial (3).pdf",
+      "path": "data/asignaturas/Opcion B/Parte específica B tecnología industrial (3).pdf",
+      "topic": "Tecnología Industrial",
+      "sizeKb": 331
+    },
+    {
+      "filename": "Parte Especifica B tecnologia industrial.pdf",
+      "path": "data/asignaturas/Opcion B/Parte Especifica B tecnologia industrial.pdf",
+      "topic": "Tecnología Industrial",
+      "sizeKb": 291
+    },
+    {
+      "filename": "Parte Específica B Tecnología industrial.pdf",
+      "path": "data/asignaturas/Opcion B/Parte Específica B Tecnología industrial.pdf",
+      "topic": "Tecnología Industrial",
+      "sizeKb": 233
+    },
+    {
+      "filename": "Parte específica dibujo técnico (2).pdf",
+      "path": "data/asignaturas/Opcion B/Parte específica dibujo técnico (2).pdf",
+      "topic": "Dibujo Técnico",
+      "sizeKb": 191
+    },
+    {
+      "filename": "Parte específica dibujo técnico (3).pdf",
+      "path": "data/asignaturas/Opcion B/Parte específica dibujo técnico (3).pdf",
+      "topic": "Dibujo Técnico",
+      "sizeKb": 207
+    },
+    {
+      "filename": "Parte específica dibujo técnico.pdf",
+      "path": "data/asignaturas/Opcion B/Parte específica dibujo técnico.pdf",
+      "topic": "Dibujo Técnico",
+      "sizeKb": 222
+    },
+    {
+      "filename": "Parte específica opción B dibujo técnico.pdf",
+      "path": "data/asignaturas/Opcion B/Parte específica opción B dibujo técnico.pdf",
+      "topic": "Dibujo Técnico",
+      "sizeKb": 183
+    },
+    {
+      "filename": "Parte específica opcion B fisica y quimica (2).pdf",
+      "path": "data/asignaturas/Opcion B/Parte específica opcion B fisica y quimica (2).pdf",
+      "topic": "Física y Química",
+      "sizeKb": 174
+    },
+    {
+      "filename": "Parte especifica opcion B fisica y quimica.pdf",
+      "path": "data/asignaturas/Opcion B/Parte especifica opcion B fisica y quimica.pdf",
+      "topic": "Física y Química",
+      "sizeKb": 120
+    },
+    {
+      "filename": "Parte específica opcion B fisica y quimica.pdf",
+      "path": "data/asignaturas/Opcion B/Parte específica opcion B fisica y quimica.pdf",
+      "topic": "Física y Química",
+      "sizeKb": 172
+    },
+    {
+      "filename": "Parte específica opcion B física y química.pdf",
+      "path": "data/asignaturas/Opcion B/Parte específica opcion B física y química.pdf",
+      "topic": "Física",
+      "sizeKb": 202
+    },
+    {
+      "filename": "Parte específica opción B física y química.pdf",
+      "path": "data/asignaturas/Opcion B/Parte específica opción B física y química.pdf",
+      "topic": "Física",
+      "sizeKb": 144
+    },
+    {
+      "filename": "Parte específica opcion B tecnología industrial.pdf",
+      "path": "data/asignaturas/Opcion B/Parte específica opcion B tecnología industrial.pdf",
+      "topic": "Tecnología Industrial",
+      "sizeKb": 135
+    },
+    {
+      "filename": "Parte específica opción B tecnología.pdf",
+      "path": "data/asignaturas/Opcion B/Parte específica opción B tecnología.pdf",
+      "topic": "Tecnología Industrial",
+      "sizeKb": 227
+    }
+  ]
+}
