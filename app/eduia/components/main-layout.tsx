@@ -156,7 +156,7 @@ export function EduIAMainLayout() {
   }
 
   return (
-    <div className="relative h-[calc(100vh-4rem)] bg-transparent overflow-hidden">
+    <div className="relative h-full bg-transparent overflow-hidden">
       <div className="flex h-full">
         {/* Sidebar Desktop */}
         <aside 

@@ -323,7 +323,7 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
       </div>
 
       {/* Contenido de la Pregunta */}
-      <div className="flex-1 p-6 bg-gradient-to-br from-slate-50 to-purple-50 dark:from-slate-900 dark:to-purple-900/20">
+      <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-slate-50 to-purple-50 dark:from-slate-900 dark:to-purple-900/20">
         <div className="max-w-4xl mx-auto">
           <AnimatePresence mode="wait">
             <motion.div
@@ -633,7 +633,7 @@ export function ExamResultsView({ results, onNewExam, onBackToChat }: ExamResult
   }
 
   return (
-    <div className="h-full hide-scrollbar bg-gradient-to-br from-slate-50 to-purple-50 dark:from-slate-900 dark:to-purple-900/20 p-6">
+    <div className="h-full overflow-y-auto bg-gradient-to-br from-slate-50 to-purple-50 dark:from-slate-900 dark:to-purple-900/20 p-6">
       <div className="max-w-5xl mx-auto">
         {/* Resultado Principal */}
         <motion.div

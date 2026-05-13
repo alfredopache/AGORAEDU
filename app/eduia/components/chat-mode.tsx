@@ -913,8 +913,8 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
     }
   }
 
-  if (examMode === "active" && examConfig) return <InteractiveExam config={examConfig} onComplete={handleExamComplete} onCancel={() => setExamMode("none")} />
-  if (examMode === "results" && examResults) return <ExamResultsView results={examResults} onNewExam={() => setExamMode("none")} onBackToChat={() => setExamMode("none")} />
+  if (examMode === "active" && examConfig) return <div className="h-full"><InteractiveExam config={examConfig} onComplete={handleExamComplete} onCancel={() => setExamMode("none")} /></div>
+  if (examMode === "results" && examResults) return <div className="h-full"><ExamResultsView results={examResults} onNewExam={() => setExamMode("none")} onBackToChat={() => setExamMode("none")} /></div>
 
   return (
     <div className="h-full flex flex-col">

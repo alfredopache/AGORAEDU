@@ -410,7 +410,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="h-full flex flex-col"
+        className="h-full min-h-0 flex flex-col"
       >
         {/* Progress Bar */}
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 p-4">
@@ -435,7 +435,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
         </div>
 
         {/* Question Area */}
-        <div className="flex-1 p-8">
+        <div className="flex-1 min-h-0 overflow-y-auto p-8">
           <div className="max-w-4xl mx-auto">
             <AnimatePresence mode="wait">
               <motion.div
@@ -665,7 +665,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="h-full p-8"
+        className="h-full overflow-y-auto p-8"
       >
         <div className="max-w-5xl mx-auto">
           {/* Score Header */}
