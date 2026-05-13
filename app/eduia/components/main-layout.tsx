@@ -156,12 +156,12 @@ export function EduIAMainLayout() {
   }
 
   return (
-    <div className="relative min-h-screen bg-transparent">
-      <div className="flex min-h-screen">
+    <div className="relative h-[calc(100vh-4rem)] bg-transparent overflow-hidden">
+      <div className="flex h-full">
         {/* Sidebar Desktop */}
         <aside 
           className={cn(
-            "hidden lg:flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl transition-all duration-300 sticky top-16 h-[calc(100vh-4rem)] self-start overflow-y-auto",
+            "hidden lg:flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl transition-all duration-300 overflow-y-auto",
             isSidebarCollapsed ? "w-0 border-none overflow-hidden" : "w-80"
           )}
         >
@@ -228,7 +228,7 @@ export function EduIAMainLayout() {
         </AnimatePresence>
 
         {/* Main Content Area */}
-        <main className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* Header con modo selector */}
           <div className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-4">
             <div className="flex items-center justify-between max-w-7xl mx-auto">
@@ -309,7 +309,7 @@ export function EduIAMainLayout() {
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 pb-16 lg:pb-0">
+          <div className="flex-1 min-h-0 overflow-hidden pb-16 lg:pb-0">
             <AnimatePresence mode="wait">
               {mode === "chat" ? (
                 <ChatMode

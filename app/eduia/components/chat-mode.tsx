@@ -248,7 +248,9 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
   const [selectedScope, setSelectedScope] = useState<ChatScope>("ambito_linguistico")
   const [showSimMenu, setShowSimMenu] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const userJustSentMessage = useRef(false)
   
   const [examMode, setExamMode] = useState<"none" | "active" | "results">("none")
   const [examConfig, setExamConfig] = useState<any>(null)
@@ -285,8 +287,15 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
   const userLabel = session?.user?.name ? session.user.name : "Google"
   const [isLocalhost, setIsLocalhost] = useState(false)
 
+  const isNearBottom = () => {
+    const el = messagesContainerRef.current
+    if (!el) return true
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 200
+  }
+
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    const el = messagesContainerRef.current
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" })
   }
 
   const getProfileStorageKey = () => {
@@ -667,7 +676,10 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
   }
 
   useEffect(() => {
-    scrollToBottom()
+    if (userJustSentMessage.current || isNearBottom()) {
+      scrollToBottom()
+      userJustSentMessage.current = false
+    }
   }, [messages])
 
   useEffect(() => {
@@ -766,6 +778,7 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
     if (textToSend.trim() === "Dame 10 ejercicios de práctica sobre" || textToSend.trim() === "Explícame de forma clara y con ejemplos:") return
 
     if (isGibberishInput(textToSend)) {
+      userJustSentMessage.current = true
       setMessages(p => [...p, { role: "assistant", content: "No puedo procesar eso.", timestamp: new Date() } as Message])
       setInput("")
       return
@@ -773,6 +786,7 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
 
     const examDetection = detectExamRequest(textToSend)
     if (examDetection.isExam) {
+      userJustSentMessage.current = true
       setMessages(m => [...m, { role: "user", content: textToSend, timestamp: new Date() } as Message])
       setInput("")
       await handleGeneratePracticeExam(examDetection.config)
@@ -781,6 +795,7 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
 
     const userMessage: Message = { role: "user", content: textToSend, timestamp: new Date() }
     const updatedMessages = [...messages, userMessage]
+    userJustSentMessage.current = true
     setMessages(updatedMessages)
     setInput("")
     setIsLoading(true)
@@ -902,13 +917,13 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
   if (examMode === "results" && examResults) return <ExamResultsView results={examResults} onNewExam={() => setExamMode("none")} onBackToChat={() => setExamMode("none")} />
 
   return (
-    <div className="flex flex-col">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col">
+    <div className="h-full flex flex-col">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex flex-col">
       {isLoadingConversation ? (
         <div className="flex items-center justify-center py-24"><Loader2 className="w-8 h-8 animate-spin text-purple-600" /></div>
       ) : (
         <>
-          <div className="px-4 py-4">
+          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-start pt-6 px-4 pb-8">
                 {/* Hero */}
@@ -1025,7 +1040,7 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="sticky bottom-0 z-10 border-t border-slate-100 dark:border-slate-800/80 px-3 pt-2.5 pb-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl relative">
+          <div className="flex-shrink-0 border-t border-slate-100 dark:border-slate-800/80 px-3 pt-2.5 pb-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl relative">
             <AnimatePresence>
               {showSimMenu && (
                 <motion.div initial={{ opacity: 0, y: 10, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.97 }} className="absolute bottom-full left-3 mb-2 p-2 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-100 dark:border-slate-700/60 rounded-2xl shadow-2xl z-50 min-w-[240px]">
