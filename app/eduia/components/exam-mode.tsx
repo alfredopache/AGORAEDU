@@ -10,7 +10,6 @@ import {
   TrendingUp, 
   BookOpen,
   Loader2,
-  PlayCircle,
   RotateCcw,
   ChevronRight,
   Award,
@@ -20,7 +19,6 @@ import {
 import { cn, clampRedactionText, getWordCount, getLineCount, MAX_REDACTION_LINES, MAX_REDACTION_WORDS, formatExamSource } from "@/lib/utils"
 import { CableMatch, isMatchingQuestion, extractMatchPairsFromOptions } from "./cable-match"
 import { PdfReferenceImage } from "./pdf-reference-image"
-import type { PracticeExamPack } from "@/lib/practice-exam-generator"
 
 const motion = motionBase as any
 
@@ -59,34 +57,12 @@ interface ExamModeProps {
 type ExamState = "setup" | "taking" | "results"
 
 const SUBJECT_OPTIONS = [
-  { value: "mixto", label: "Mixto (todas)", emoji: "🧠", color: "from-indigo-500 to-purple-500" },
-  { value: "lengua-literatura", label: "Lengua y Literatura", emoji: "📝", color: "from-indigo-500 to-purple-500" },
-  { value: "ingles", label: "Inglés", emoji: "🌍", color: "from-emerald-500 to-green-600" },
-  { value: "sociales", label: "Ciencias Sociales, Geografía e Historia", emoji: "🏛️", color: "from-yellow-500 to-orange-500" },
-  { value: "matematicas", label: "Matemáticas", emoji: "🔢", color: "from-blue-600 to-indigo-600" },
-  { value: "naturales", label: "Ciencias Naturales", emoji: "💧", color: "from-teal-500 to-cyan-500" },
-  { value: "tic", label: "TIC", emoji: "💻", color: "from-green-400 to-teal-500" },
-]
-
-const SUBJECT_GROUPS = [
-  {
-    title: "Parte lingüística",
-    items: ["lengua-literatura", "ingles"],
-  },
-  {
-    title: "Parte social",
-    items: ["sociales"],
-  },
-  {
-    title: "Parte científico-matemática-técnica",
-    items: ["matematicas", "naturales", "tic"],
-  },
-]
-
-const DIFFICULTY_OPTIONS = [
-  { value: "basico", label: "Básico", stars: "⭐" },
-  { value: "intermedio", label: "Intermedio", stars: "⭐⭐" },
-  { value: "avanzado", label: "Avanzado", stars: "⭐⭐⭐" },
+  { value: "lengua",      label: "Lengua y Literatura",            emoji: "📝", color: "from-indigo-500 to-purple-500" },
+  { value: "ingles",     label: "Inglés",                         emoji: "🌍", color: "from-emerald-500 to-green-600" },
+  { value: "sociales",   label: "Geografía e Historia",           emoji: "🏛️", color: "from-yellow-500 to-orange-500" },
+  { value: "matematicas",label: "Matemáticas",                    emoji: "🔢", color: "from-blue-600 to-indigo-600" },
+  { value: "ciencias",   label: "Ciencias Naturales",             emoji: "🔬", color: "from-teal-500 to-cyan-500" },
+  { value: "tic",        label: "TIC",                            emoji: "💻", color: "from-green-400 to-teal-500" },
 ]
 
 export function ExamMode({ sessionId }: ExamModeProps) {
@@ -128,12 +104,9 @@ export function ExamMode({ sessionId }: ExamModeProps) {
     }
     return { type: 'text', value: img }
   }
-  // Dificultad fija para simulacro de Grado Medio
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>("intermedio")
-  const [questionCount, setQuestionCount] = useState<number>(36)
-  const [secondsPerQuestion, setSecondsPerQuestion] = useState<number>(60)
-  const [useSimulacroPreset, setUseSimulacroPreset] = useState<boolean>(false)
-  const [timeTotalMinutes, setTimeTotalMinutes] = useState<number>(60)
+  const selectedDifficulty = "intermedio"
+  const questionCount = 5
+  const [secondsPerQuestion] = useState<number>(90)
   
   const [questions, setQuestions] = useState<ExamQuestion[]>([])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
@@ -154,9 +127,22 @@ export function ExamMode({ sessionId }: ExamModeProps) {
   const [score, setScore] = useState<number>(0)
   const [analysis, setAnalysis] = useState<any>(null)
 
-  const shouldUseWrittenAnswer = (question?: ExamQuestion | null) => {
-    const subjectHint = `${selectedSubject || ""} ${question?.subject || ""}`.toLowerCase()
-    return /matem/.test(subjectHint)
+  // --- localStorage helpers for anti-repeat ---
+  const seenKey = (subject: string) => `eduia_seen_v1_${subject}`
+
+  const getSeenIds = (subject: string): string[] => {
+    try {
+      const raw = localStorage.getItem(seenKey(subject))
+      return raw ? JSON.parse(raw) : []
+    } catch { return [] }
+  }
+
+  const addSeenIds = (subject: string, ids: string[]) => {
+    try {
+      const existing = getSeenIds(subject)
+      const merged = [...new Set([...existing, ...ids])]
+      localStorage.setItem(seenKey(subject), JSON.stringify(merged))
+    } catch {}
   }
 
   useEffect(() => {
@@ -165,56 +151,22 @@ export function ExamMode({ sessionId }: ExamModeProps) {
     }
   }, [currentQuestionIndex, examState])
 
-  const startExam = async () => {
-    if (!useSimulacroPreset && !selectedSubject) return
+  const startExam = async (subjectArg?: string) => {
+    const subjectToUse = subjectArg ?? selectedSubject
+    if (!subjectToUse) return
 
+    setSelectedSubject(subjectToUse)
     setIsLoading(true)
     try {
-      if (useSimulacroPreset) {
-        // Llamar al endpoint que arma un simulacro completo por bloques
-        const params = new URLSearchParams({
-          difficulty: selectedDifficulty,
-          preset: 'gradoMedio',
-          timeTotal: String(timeTotalMinutes),
-          secondsPerQuestion: String(secondsPerQuestion),
-          seed: String(Math.floor(Math.random() * 1e9)),
-        })
-
-        const response = await fetch(`/api/exam/simulacro?${params.toString()}`)
-        if (!response.ok) throw new Error('Error obteniendo simulacro')
-        const data = await response.json()
-        if (!data || !data.simulacro || !Array.isArray(data.simulacro.questions) || data.simulacro.questions.length === 0) {
-          alert('No hay preguntas disponibles para el simulacro. Intenta cambiar la configuración.')
-          setIsLoading(false)
-          return
-        }
-
-        setQuestions(data.simulacro.questions)
-        // sincronizar segundos por pregunta si el servidor lo asignó
-        if (data.simulacro.secondsPerQuestion) setSecondsPerQuestion(data.simulacro.secondsPerQuestion)
-        setExamState('taking')
-        setStartTime(Date.now())
-        setQuestionStartTime(Date.now())
-        setTimeLeft(secondsPerQuestion)
-        setUserAnswers([])
-        return
-      }
-
-      // soportar subject con topic: e.g. 'lengua:comentario'
-      let subjectParam = selectedSubject
-      let topicParam: string | undefined = undefined
-      if (selectedSubject.includes(':')) {
-        const parts = selectedSubject.split(':')
-        subjectParam = parts[0]
-        topicParam = parts.slice(1).join(':')
-      }
-
+      const seenIds = getSeenIds(subjectToUse)
       const params = new URLSearchParams({
-        subject: subjectParam,
+        subject: subjectToUse,
         difficulty: selectedDifficulty,
         count: questionCount.toString(),
       })
-      if (topicParam) params.set('topic', topicParam)
+      if (seenIds.length > 0) {
+        params.set('exclude', seenIds.join(','))
+      }
 
       const response = await fetch(`/api/exam/questions?${params.toString()}`)
       
@@ -225,11 +177,12 @@ export function ExamMode({ sessionId }: ExamModeProps) {
       const data = await response.json()
 
       if (!data || !Array.isArray(data.questions) || data.questions.length === 0) {
-        alert("No hay preguntas disponibles para esta configuración. Intenta con otra materia o dificultad.")
+        alert("No hay preguntas disponibles para esta materia. Intenta con otra.")
         setIsLoading(false)
         return
       }
 
+      addSeenIds(subjectToUse, (data.questions as ExamQuestion[]).map((q) => q._id))
       setQuestions(data.questions)
       setExamState("taking")
       setStartTime(Date.now())
@@ -238,7 +191,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
       setUserAnswers([])
     } catch (error) {
       console.error("Error:", error)
-      alert("Error al cargar el simulacro. Por favor, intenta de nuevo.")
+      alert("Error al cargar el examen. Por favor, intenta de nuevo.")
     } finally {
       setIsLoading(false)
     }
@@ -398,272 +351,52 @@ export function ExamMode({ sessionId }: ExamModeProps) {
     setAnalysis(null)
     setStartTime(0)
     setQuestionStartTime(0)
+    // Do not reset selectedSubject so user can restart same subject quickly
   }
 
-  // SETUP VIEW
+  // SETUP VIEW — simple subject picker
   if (examState === "setup") {
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="h-full p-8"
-      >
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <div className="bg-gradient-to-br from-pink-500 to-purple-500 p-6 rounded-3xl inline-block mb-4">
-              <GraduationCap className="w-16 h-16 text-white" />
+      <div className="h-full overflow-y-auto">
+        <div className="max-w-2xl mx-auto px-6 py-12">
+          <div className="text-center mb-10">
+            <div className="bg-gradient-to-br from-violet-500 to-fuchsia-500 p-5 rounded-2xl inline-block mb-4">
+              <GraduationCap className="w-12 h-12 text-white" />
             </div>
-            <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-3">
-                Modo Simulacro
-              </h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400">
-                Practica con simulacros confeccionados a partir de preguntas oficiales
-              </p>
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Elige una asignatura</h2>
+            <p className="text-slate-500 dark:text-slate-400">5 preguntas oficiales · responde y ve tu resultado al instante</p>
           </div>
 
-          {/* Configuración del Examen */}
-          <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-2xl border border-slate-200 dark:border-slate-700">
-            <h3 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">
-              Configura tu simulacro
-            </h3>
-
-            {/* Selección de Materia */}
-            <div className="mb-8">
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-                📚 Selecciona el ámbito:
-              </label>
-              <div className="grid gap-6">
-                <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-3">General</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                    {SUBJECT_OPTIONS.filter((subject) => subject.value === 'mixto').map((subject) => (
-                      <button
-                        key={subject.value}
-                        onClick={() => setSelectedSubject(subject.value)}
-                        className={cn(
-                          "p-4 rounded-xl border-2 transition-all text-left group pointer-events-auto",
-                          selectedSubject === subject.value
-                            ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-lg scale-105"
-                            : "border-slate-200 dark:border-slate-700 hover:border-purple-300 dark:hover:border-purple-600"
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-3xl">{subject.emoji}</span>
-                          <div>
-                            <p className="font-bold text-slate-900 dark:text-white">{subject.label}</p>
-                            {selectedSubject === subject.value && (
-                              <CheckCircle2 className="w-4 h-4 text-purple-600 mt-1" />
-                            )}
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {SUBJECT_GROUPS.map((group) => (
-                  <div key={group.title}>
-                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-3">{group.title}</p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      {group.items.map((value) => {
-                        const subject = SUBJECT_OPTIONS.find((item) => item.value === value)
-                        if (!subject) return null
-                        return (
-                          <button
-                            key={subject.value}
-                            onClick={() => setSelectedSubject(subject.value)}
-                            className={cn(
-                              "p-4 rounded-xl border-2 transition-all text-left group pointer-events-auto",
-                              selectedSubject === subject.value
-                                ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-lg scale-105"
-                                : "border-slate-200 dark:border-slate-700 hover:border-purple-300 dark:hover:border-purple-600"
-                            )}
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="text-3xl">{subject.emoji}</span>
-                              <div>
-                                <p className="font-bold text-slate-900 dark:text-white">{subject.label}</p>
-                                {selectedSubject === subject.value && (
-                                  <CheckCircle2 className="w-4 h-4 text-purple-600 mt-1" />
-                                )}
-                              </div>
-                            </div>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
+          {isLoading ? (
+            <div className="flex flex-col items-center gap-4 py-16">
+              <Loader2 className="w-10 h-10 animate-spin text-violet-600" />
+              <p className="text-slate-500 dark:text-slate-400 font-medium">Cargando preguntas…</p>
             </div>
-
-            {/* Dificultad fija (Grado Medio) */}
-            <div className="mb-6">
-              <p className="text-sm text-slate-600 dark:text-slate-400">La dificultad está fijada a <strong>Intermedio</strong> para este simulacro de Grado Medio. No puedes cambiarla.</p>
-            </div>
-
-            {/* Cantidad de Preguntas */}
-            <div className="mb-8">
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-                🔢 Número de preguntas:
-              </label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min="1"
-                  max="36"
-                  step="1"
-                  value={questionCount}
-                  onChange={(e) => setQuestionCount(Number(e.target.value))}
-                  className="flex-1 pointer-events-auto"
-                  disabled={useSimulacroPreset}
-                />
-                <input
-                  type="number"
-                  min={1}
-                  max={36}
-                  value={questionCount}
-                  onChange={(e) => {
-                    const v = Number(e.target.value)
-                    if (!isNaN(v)) setQuestionCount(Math.max(1, Math.min(36, Math.floor(v))))
-                  }}
-                  className="w-20 text-center rounded-md border px-2 py-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                  aria-label="Número de preguntas"
-                  disabled={useSimulacroPreset}
-                />
-                <span className="text-sm text-slate-500 dark:text-slate-400">preguntas</span>
-              </div>
-            </div>
-
-            {/* Tiempo por pregunta */}
-            <div className="mb-8">
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-                ⏱️ Tiempo por pregunta (segundos):
-              </label>
-              <div className="flex items-center gap-3">
-                <select
-                  value={secondsPerQuestion}
-                  onChange={(e) => setSecondsPerQuestion(Number(e.target.value))}
-                  className="px-3 py-2 rounded-md border bg-white dark:bg-slate-800"
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {SUBJECT_OPTIONS.map((sub) => (
+                <button
+                  key={sub.value}
+                  onClick={() => startExam(sub.value)}
+                  className={cn(
+                    "group relative flex items-center gap-4 p-5 rounded-2xl border-2 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg",
+                    selectedSubject === sub.value
+                      ? "border-violet-500 bg-violet-50 dark:bg-violet-900/20 shadow-md"
+                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-violet-300 dark:hover:border-violet-600"
+                  )}
                 >
-                  <option value={30}>30</option>
-                  <option value={45}>45</option>
-                  <option value={60}>60</option>
-                  <option value={90}>90</option>
-                  <option value={120}>120</option>
-                </select>
-                <span className="text-sm text-slate-500 dark:text-slate-400">segundos por pregunta</span>
-              </div>
+                  <span className="text-4xl">{sub.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-900 dark:text-white text-base leading-tight">{sub.label}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">5 preguntas</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-violet-600 transition-colors flex-shrink-0" />
+                </button>
+              ))}
             </div>
-
-            {/* Simulacro oficial (preset) */}
-            <div className="mb-6">
-              <label className="inline-flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={useSimulacroPreset}
-                  onChange={(e) => setUseSimulacroPreset(e.target.checked)}
-                  className="w-4 h-4"
-                />
-                <span className="font-semibold text-slate-900 dark:text-white">Usar simulacro oficial (Grado Medio)</span>
-              </label>
-              {useSimulacroPreset && (
-                <div className="mt-3 flex items-center gap-3">
-                  <label className="text-sm text-slate-600 dark:text-slate-400">Tiempo total (min):</label>
-                  <input
-                    type="number"
-                    min={10}
-                    max={180}
-                    value={timeTotalMinutes}
-                    onChange={(e) => setTimeTotalMinutes(Math.max(10, Math.min(180, Number(e.target.value) || 60)))}
-                    className="w-24 text-center rounded-md border px-2 py-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                  />
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Se generará un simulacro por bloques (distribución oficial).</p>
-                </div>
-              )}
-            </div>
-
-            {/* Acciones */}
-            <div className="space-y-3">
-              <button
-                onClick={startExam}
-                disabled={(!useSimulacroPreset && !selectedSubject) || isLoading}
-                className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-3xl p-5 transition-transform shadow-lg shadow-fuchsia-500/15 hover:-translate-y-0.5 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-base flex items-center justify-center gap-3"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Cargando preguntas...
-                  </>
-                ) : (
-                  <>
-                    <PlayCircle className="w-5 h-5" />
-                    Simular examen interactivo
-                  </>
-                )}
-              </button>
-
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Este PDF crea un examen nuevo con preguntas aleatorias de Grado Medio y anade un solucionario completo al final para practicar fuera de la app.
-              </p>
-            </div>
-
-              {/* Descargas oficiales (AccesoIA - Valencia, Grado Medio) - visible en setup */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="mt-6 bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-md border border-slate-200 dark:border-slate-700"
-              >
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">Descargas — AccesoIA (Valencia · Grado Medio)</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">Enlaces útiles y PDFs de pruebas de acceso (València, Grado Mitjà).</p>
-                <ul className="space-y-2">
-                  <li>
-                    <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2017.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2017 — Prueba de Acceso (parte común)</a>
-                    <div className="text-xs text-slate-500">ceice.gva.es · 2017 · PDF verificado</div>
-                  </li>
-                  <li>
-                    <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2018.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2018 — Prueba de Acceso (parte común)</a>
-                    <div className="text-xs text-slate-500">ceice.gva.es · 2018 · PDF verificado</div>
-                  </li>
-                  <li>
-                    <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2019.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2019 — Prueba de Acceso (parte común)</a>
-                    <div className="text-xs text-slate-500">ceice.gva.es · 2019 · PDF verificado</div>
-                  </li>
-                  <li>
-                    <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2020.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2020 — Prueba de Acceso (parte común)</a>
-                    <div className="text-xs text-slate-500">ceice.gva.es · 2020 · PDF verificado</div>
-                  </li>
-                  <li>
-                    <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2021.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2021 — Prueba de Acceso (parte común)</a>
-                    <div className="text-xs text-slate-500">ceice.gva.es · 2021 · PDF verificado</div>
-                  </li>
-                  <li>
-                    <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2022.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2022 — Prueba de Acceso (parte común)</a>
-                    <div className="text-xs text-slate-500">ceice.gva.es · 2022 · PDF verificado</div>
-                  </li>
-                  <li>
-                    <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2023.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2023 — Prueba de Acceso (parte común)</a>
-                    <div className="text-xs text-slate-500">ceice.gva.es · 2023 · PDF verificado</div>
-                  </li>
-                  <li>
-                    <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2024.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2024 — Prueba de Acceso (parte común)</a>
-                    <div className="text-xs text-slate-500">ceice.gva.es · 2024 · PDF verificado</div>
-                  </li>
-                  <li>
-                    <a href="https://ceice.gva.es/documents/388109149/0/JUNTOS+GM+2025.pdf/eaff2543-5199-f592-6af1-aa689a78ea67" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">JUNTOS GM 2025 — Documentación / partes (GM 2025)</a>
-                    <div className="text-xs text-slate-500">ceice.gva.es · 2025 · PDF verificado</div>
-                  </li>
-                  <li>
-                    <a href="https://ceice.gva.es/documents/388109149/392974777/OrientacionesGMGS_va.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Orientaciones Admisión GM/GS 2024-25 (valencià)</a>
-                    <div className="text-xs text-slate-500">ceice.gva.es · 2024 · PDF verificado</div>
-                  </li>
-                </ul>
-              </motion.div>
-          </div>
+          )}
         </div>
-      </motion.div>
+      </div>
     )
   }
 
@@ -805,36 +538,6 @@ export function ExamMode({ sessionId }: ExamModeProps) {
                         : null
                       const useMatchUI = matchPairs && isMatchingQuestion(currentQuestion.question, currentQuestion.topic)
 
-                      const forceWrittenAnswer = shouldUseWrittenAnswer(currentQuestion)
-
-                      if (forceWrittenAnswer) {
-                        return (
-                          <div className="space-y-3">
-                            <textarea
-                              value={openAnswer}
-                              onChange={(e) => setOpenAnswer(clampRedactionText(e.target.value, MAX_REDACTION_WORDS, MAX_REDACTION_LINES))}
-                              placeholder="Escribe tú la respuesta completa aquí..."
-                              rows={8}
-                              className="w-full min-h-[120px] p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                            />
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                              <p className="text-sm text-slate-500 dark:text-slate-400">
-                                {openAnswerWordCount}/{MAX_REDACTION_WORDS} palabras · {openAnswerLineCount}/{MAX_REDACTION_LINES} líneas
-                              </p>
-                              <div className="flex justify-end">
-                                <button
-                                  onClick={() => handleOpenSubmit(openAnswer)}
-                                  disabled={!isOpenAnswerValid}
-                                  className="px-6 py-2 rounded-lg bg-purple-600 text-white disabled:opacity-50"
-                                >
-                                  Enviar respuesta
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      }
-
                       if (useMatchUI && matchPairs) {
                         return (
                           <CableMatch
@@ -884,12 +587,15 @@ export function ExamMode({ sessionId }: ExamModeProps) {
 
                       return (
                         <div className="space-y-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full text-xs font-semibold">✏️ Pregunta abierta — escribe tu respuesta</span>
+                          </div>
                           <textarea
                             value={openAnswer}
                             onChange={(e) => setOpenAnswer(clampRedactionText(e.target.value, MAX_REDACTION_WORDS, MAX_REDACTION_LINES))}
-                            placeholder="Escribe tu respuesta aquí..."
+                            placeholder="Desarrolla tu respuesta aquí..."
                             rows={8}
-                            className="w-full min-h-[120px] p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                            className="w-full min-h-[160px] p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-400 dark:focus:ring-amber-500 resize-y"
                           />
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -899,7 +605,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
                               <button
                                 onClick={() => handleOpenSubmit(openAnswer)}
                                 disabled={!isOpenAnswerValid}
-                                className="px-6 py-2 rounded-lg bg-purple-600 text-white disabled:opacity-50"
+                                className="px-6 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold disabled:opacity-50 transition-colors"
                               >
                                 Enviar respuesta
                               </button>

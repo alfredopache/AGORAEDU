@@ -10,6 +10,10 @@ export async function GET(request: NextRequest) {
     const difficulty = searchParams.get("difficulty")
     const count = parseInt(searchParams.get("count") || "10")
     const topic = searchParams.get("topic") // optional topic filter (e.g., 'Comentario', 'Historia')
+    const excludeParam = searchParams.get("exclude") // comma-separated _id values already seen by the user
+    const excludeSet = new Set(
+      excludeParam ? excludeParam.split(',').map((s) => s.trim()).filter(Boolean) : []
+    )
 
     if (!subject || !difficulty) {
       return NextResponse.json(
@@ -199,17 +203,16 @@ export async function GET(request: NextRequest) {
     // Mapas para ámbitos compuestos (mantener compatibilidad con UI)
     const AMBITO_MAP: Record<string, string[]> = {
       ambito_linguistico: ['lengua', 'ingles', 'sociales'],
-      ambito_cientifico: ['matematicas', 'sociales', 'tic'],
+      ambito_cientifico: ['matematicas', 'ciencias', 'tic'],
     }
 
-    // Filtrado según subject/difficulty/topic
-    let candidates = activeOnly.filter((q: any) => q.difficulty === difficulty)
+    // Filter by subject first (no difficulty hard-filter — fallback to any difficulty)
+    let subjectPool: any[] = activeOnly
     if (subject !== 'mixto') {
       if (AMBITO_MAP[subject]) {
         const subs = AMBITO_MAP[subject]
-        candidates = candidates.filter((q: any) => subs.includes(q.subject))
+        subjectPool = activeOnly.filter((q: any) => subs.includes(q.subject))
       } else {
-        // permitir subject:topic en formato 'lengua:comentario'
         let subjParam = subject
         let topicParam: string | undefined = undefined
         if (subject.includes(':')) {
@@ -218,7 +221,7 @@ export async function GET(request: NextRequest) {
           topicParam = parts.slice(1).join(':')
         }
 
-        const subjectCandidates = candidates.filter((q: any) => q.subject === subjParam)
+        const subjectCandidates = subjectPool.filter((q: any) => q.subject === subjParam)
         if (topicParam) {
           const topicNormalized = normalizeText(topicParam)
           const topicCandidates = subjectCandidates.filter((q: any) => {
@@ -231,11 +234,26 @@ export async function GET(request: NextRequest) {
               sourceMatch.includes(topicNormalized)
             )
           })
-          candidates = topicCandidates.length > 0 ? topicCandidates : subjectCandidates
+          subjectPool = topicCandidates.length > 0 ? topicCandidates : subjectCandidates
         } else {
-          candidates = subjectCandidates
+          subjectPool = subjectCandidates
         }
       }
+    }
+
+    // Prefer requested difficulty but fall back to all difficulties if not enough results
+    // First, try to exclude already-seen questions; if not enough fresh ones, use full pool
+    if (excludeSet.size > 0) {
+      const freshPool = subjectPool.filter((q: any) => !excludeSet.has(q._id))
+      if (freshPool.length >= count) {
+        subjectPool = freshPool
+      }
+      // else: not enough fresh questions for this subject → repeat is OK, keep full pool
+    }
+
+    let candidates = subjectPool.filter((q: any) => q.difficulty === difficulty)
+    if (candidates.length < count) {
+      candidates = subjectPool
     }
 
     // Si se proporciona un parámetro topic separado, aplicarlo también
