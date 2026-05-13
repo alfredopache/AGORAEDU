@@ -157,11 +157,11 @@ export function EduIAMainLayout() {
 
   return (
     <div className="relative min-h-screen bg-transparent">
-      <div className="min-h-screen flex">
+      <div className="flex min-h-screen">
         {/* Sidebar Desktop */}
         <aside 
           className={cn(
-            "hidden lg:flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl transition-all duration-300 relative",
+            "hidden lg:flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl transition-all duration-300 sticky top-16 h-[calc(100vh-4rem)] self-start overflow-y-auto",
             isSidebarCollapsed ? "w-0 border-none overflow-hidden" : "w-80"
           )}
         >
@@ -228,7 +228,7 @@ export function EduIAMainLayout() {
         </AnimatePresence>
 
         {/* Main Content Area */}
-        <main className="flex-1 min-h-0 flex flex-col">
+        <main className="flex-1 flex flex-col">
           {/* Header con modo selector */}
           <div className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-4">
             <div className="flex items-center justify-between max-w-7xl mx-auto">
@@ -267,7 +267,7 @@ export function EduIAMainLayout() {
                     </div>
                   <Link
                     href="/eduia/mejorar"
-                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:text-white"
+                    className="hidden sm:inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:text-white"
                   >
                     Mejorar
                     <ArrowUpRight className="h-4 w-4" />
@@ -278,7 +278,7 @@ export function EduIAMainLayout() {
               {/* Racha y Selector de Modo */}
               <div className="flex items-center gap-3">
               <StreakBadge />
-              <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+              <div className="hidden lg:flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
                 <button
                   onClick={() => setMode("chat")}
                   className={cn(
@@ -309,7 +309,7 @@ export function EduIAMainLayout() {
           </div>
 
           {/* Content Area */}
-          <div className="flex-1">
+          <div className="flex-1 pb-16 lg:pb-0">
             <AnimatePresence mode="wait">
               {mode === "chat" ? (
                 <ChatMode
@@ -328,6 +328,32 @@ export function EduIAMainLayout() {
               )}
             </AnimatePresence>
           </div>
+
+          {/* Mobile Bottom Navigation */}
+          <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-t border-slate-200/80 dark:border-slate-800/80 px-4 py-2">
+            <div className="flex items-center justify-around max-w-xs mx-auto">
+              <button
+                onClick={() => setMode("chat")}
+                className={cn(
+                  "flex flex-col items-center gap-1 px-8 py-2 rounded-2xl transition-all",
+                  mode === "chat" ? "text-purple-600 dark:text-purple-400" : "text-slate-400 dark:text-slate-500"
+                )}
+              >
+                <MessageSquare className={cn("w-5 h-5 transition-transform", mode === "chat" && "scale-110")} />
+                <span className="text-[10px] font-semibold">Chat</span>
+              </button>
+              <button
+                onClick={() => setMode("exam")}
+                className={cn(
+                  "flex flex-col items-center gap-1 px-8 py-2 rounded-2xl transition-all",
+                  mode === "exam" ? "text-pink-600 dark:text-pink-400" : "text-slate-400 dark:text-slate-500"
+                )}
+              >
+                <GraduationCap className={cn("w-5 h-5 transition-transform", mode === "exam" && "scale-110")} />
+                <span className="text-[10px] font-semibold">Simulacro</span>
+              </button>
+            </div>
+          </nav>
         </main>
       </div>
 

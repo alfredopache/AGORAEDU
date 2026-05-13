@@ -20,16 +20,24 @@ export function LayoutContent({ children, latestProject }: LayoutContentProps) {
   
   // Ocultamos Nav y Footer en el estudio de Sanity
   const isAdmin = pathname?.startsWith("/admin")
+  // En /eduia la página gestiona su propio layout de altura completa
+  const isEduIA = pathname?.startsWith("/eduia")
 
   return (
     <>
       {/* Pasamos los datos del proyecto a la Navbar */}
       {!isAdmin && <BlogNav latestProject={latestProject ?? undefined} />}
-      <main className="pt-20 md:pt-24 lg:pt-28 min-h-screen">
-        {children}
-      </main>
+      {isEduIA ? (
+        <main className="pt-16 min-h-screen">
+          {children}
+        </main>
+      ) : (
+        <main className="pt-20 md:pt-24 lg:pt-28 min-h-screen">
+          {children}
+        </main>
+      )}
 
-      {!isAdmin && <BlogFooter />}
+      {!isAdmin && !isEduIA && <BlogFooter />}
     </>
   )
 }

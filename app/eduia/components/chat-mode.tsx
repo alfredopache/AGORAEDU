@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useSession } from "next-auth/react"
-import { Send, Loader2, Bot, BookOpen, Lightbulb, Sparkles, Menu, X } from "lucide-react"
+import { Send, Loader2, Bot, BookOpen, Lightbulb, Sparkles, Menu, X, Brain, Zap, Target, TrendingUp, Activity } from "lucide-react"
 import { motion as motionBase, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { downloadPracticeExamPdf } from "@/lib/practice-exam-pdf"
@@ -49,6 +49,12 @@ const QUICK_ACTIONS = [
   { label: "Práctica", prompt: "Dame ejercicios de práctica sobre ", icon: BookOpen, color: "text-emerald-500", glow: "hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]", border: "hover:border-emerald-400" },
   { label: "Dudas", prompt: "Tengo una duda sobre ", icon: Lightbulb, color: "text-amber-500", glow: "hover:shadow-[0_0_15px_rgba(245,158,11,0.4)]", border: "hover:border-amber-400" },
   { label: "Simulacros", prompt: "SIM_MENU", icon: Sparkles, color: "text-pink-500", glow: "hover:shadow-[0_0_15px_rgba(236,72,153,0.4)]", border: "hover:border-pink-400" },
+]
+
+const UNIVERSITY_QUICK_ACTIONS = [
+  { label: "Diagnóstico", prompt: "Hazme un diagnóstico completo de mi perfil académico: identifica mis lagunas exactas, mis fortalezas reales, y dame un plan de mejora inmediato con predicción de resultado.", icon: Brain, color: "text-cyan-500", glow: "hover:shadow-[0_0_15px_rgba(6,182,212,0.4)]", border: "hover:border-cyan-400" },
+  { label: "Plan de estudio", prompt: "Crea un plan de estudio personalizado semana a semana para mí, basado en mi perfil, objetivos y tiempo disponible.", icon: Target, color: "text-blue-500", glow: "hover:shadow-[0_0_15px_rgba(59,130,246,0.4)]", border: "hover:border-blue-400" },
+  { label: "Simulacro", prompt: "SIM_MENU", icon: Zap, color: "text-violet-500", glow: "hover:shadow-[0_0_15px_rgba(139,92,246,0.4)]", border: "hover:border-violet-400" },
 ]
 
 const GOALS = [
@@ -896,105 +902,190 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
   if (examMode === "results" && examResults) return <ExamResultsView results={examResults} onNewExam={() => setExamMode("none")} onBackToChat={() => setExamMode("none")} />
 
   return (
-    <div className="h-full min-h-0 flex flex-col">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
+    <div className="flex flex-col">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col">
       {isLoadingConversation ? (
-        <div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-purple-600" /></div>
+        <div className="flex items-center justify-center py-24"><Loader2 className="w-8 h-8 animate-spin text-purple-600" /></div>
       ) : (
         <>
-          <div className="flex-1 min-h-0 p-6 space-y-4">
+          <div className="px-4 py-4">
             {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-start pt-6 px-4 pb-8 overflow-y-auto">
+              <div className="flex flex-col items-center justify-start pt-6 px-4 pb-8">
                 {/* Hero */}
-                <div className="bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 p-6 rounded-3xl mb-6 max-w-2xl w-full text-center">
-                  <Bot className="w-12 h-12 text-purple-600 mx-auto mb-3" />
-                  <h3 className="text-2xl font-bold mb-2">¡Hola! Soy Acceso IA 👋</h3>
-                  <p className="text-sm opacity-75 mb-1 max-w-md mx-auto">Tu tutora personal para preparar pruebas de acceso a FP y reforzar los ámbitos clave de Grado Básico y ESO.</p>
-                  <p className="text-sm opacity-55 max-w-md mx-auto">Elige qué quieres preparar y empieza con práctica, resolución de dudas o simulacros adaptados a tu nivel.</p>
-                  <div className="mt-4 inline-flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-white/60 bg-white/70 px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/60 dark:text-slate-200">
-                    <span className={cn("rounded-full bg-gradient-to-r px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-white", activePlan.id === "university" ? "from-cyan-500 to-blue-600" : activePlan.id === "master" ? "from-amber-400 to-red-500" : "from-fuchsia-500 to-pink-500")}>{activePlan.name}</span>
-                    <span>{activePlan.tagline}</span>
-                    {activePlan.id === "university" ? <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-cyan-700 dark:border-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-300">Thinking</span> : null}
+                {selectedPlanId === "university" ? (
+                  <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-cyan-950/80 to-blue-950 border border-cyan-500/20 p-6 rounded-3xl mb-6 max-w-2xl w-full text-center shadow-2xl shadow-cyan-500/10">
+                    <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
+                    <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+                    <div className="relative z-10">
+                      <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.3em] text-cyan-400 mb-5">
+                        <Activity className="w-3 h-3" />
+                        <span>University — IA Adaptativa v3.0</span>
+                      </div>
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-cyan-500/30">
+                        <Brain className="w-7 h-7 text-white" />
+                      </div>
+                      <h3 className="text-2xl font-bold mb-2 text-white">Acceso IA University</h3>
+                      <p className="text-sm text-cyan-100/75 mb-1 max-w-sm mx-auto leading-relaxed">Sistema de Inteligencia Adaptativa de nueva generación. Diagnosica tus lagunas exactas, construye tu plan personalizado y predice tu resultado real.</p>
+                      <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                        {[
+                          { icon: Brain, label: "Diagnóstico cognitivo" },
+                          { icon: Target, label: "Plan adaptativo" },
+                          { icon: TrendingUp, label: "Predicción de resultado" },
+                          { icon: Zap, label: "Modo socrático" },
+                        ].map(({ icon: Icon, label }) => (
+                          <div key={label} className="flex items-center gap-1.5 rounded-full border border-cyan-500/20 bg-white/5 px-3 py-1.5 text-xs text-cyan-200/80">
+                            <Icon className="w-3 h-3 text-cyan-400" />
+                            <span>{label}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => sendMessage("Hazme un diagnóstico completo de mi perfil académico: identifica mis lagunas exactas, mis fortalezas reales, y dame un plan de mejora inmediato con predicción de resultado.")}
+                        className="mt-5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-semibold px-6 py-2.5 rounded-2xl hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-cyan-500/20 w-full sm:w-auto"
+                      >
+                        Iniciar diagnóstico completo →
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 p-6 rounded-3xl mb-6 max-w-2xl w-full text-center">
+                    <Bot className="w-12 h-12 text-purple-600 mx-auto mb-3" />
+                    <h3 className="text-2xl font-bold mb-2">¡Hola! Soy Acceso IA 👋</h3>
+                    <p className="text-sm opacity-75 mb-1 max-w-md mx-auto">Tu tutora personal para preparar pruebas de acceso a FP y reforzar los ámbitos clave de Grado Básico y ESO.</p>
+                    <p className="text-sm opacity-55 max-w-md mx-auto">Elige qué quieres preparar y empieza con práctica, resolución de dudas o simulacros adaptados a tu nivel.</p>
+                    <div className="mt-4 inline-flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-white/60 bg-white/70 px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm dark:border-slate-700/70 dark:bg-slate-900/60 dark:text-slate-200">
+                      <span className={cn("rounded-full bg-gradient-to-r px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-white", activePlan.id === "master" ? "from-amber-400 to-red-500" : "from-fuchsia-500 to-pink-500")}>{activePlan.name}</span>
+                      <span>{activePlan.tagline}</span>
+                    </div>
+                  </div>
+                )}
 
                 {renderWelcomeScreen()}
               </div>
             ) : (
               <AnimatePresence>
-                {messages.map((m, i) => (
-                  <div key={i} className={cn("flex w-full mb-4", m.role === "user" ? "justify-end" : "justify-start")}>
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={cn("max-w-[85%] rounded-2xl border shadow-sm", m.role === "user" ? "bg-purple-600 text-white border-purple-500" : "bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700")}>
-                      <div className={cn("px-4 pt-4 pb-2 rounded-t-2xl text-xs font-semibold uppercase tracking-[0.18em]", m.role === "user" ? "text-purple-100" : "text-slate-500 dark:text-slate-400")}> 
-                        {m.role === "user" ? "Tú" : "AccesoIA"}
-                      </div>
-                      <div className="px-4 pb-4">
-                        {m.role === "assistant" ? <MarkdownRenderer content={m.content} /> : <p className="text-sm whitespace-pre-wrap">{m.content}</p>}
-                      </div>
-                    </motion.div>
-                  </div>
-                ))}
+                {messages.map((m, i) => {
+                  const prevMsg = messages[i - 1]
+                  const isGrouped = prevMsg?.role === m.role
+                  return (
+                    <div key={i} className={cn("flex w-full", m.role === "user" ? "justify-end" : "justify-start items-end gap-2", isGrouped ? "mt-1" : "mt-4")}>
+                      {m.role === "assistant" && (
+                        <div className={cn(
+                          "w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center shadow-sm transition-opacity",
+                          selectedPlanId === "university" ? "bg-gradient-to-br from-cyan-500 to-blue-600 shadow-cyan-500/20" : "bg-gradient-to-br from-purple-600 to-pink-500 shadow-purple-500/20",
+                          isGrouped ? "opacity-0" : "opacity-100"
+                        )}>
+                          {selectedPlanId === "university" ? <Brain className="w-3.5 h-3.5 text-white" /> : <Bot className="w-3.5 h-3.5 text-white" />}
+                        </div>
+                      )}
+                      <motion.div
+                        initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                        className={cn(
+                          "max-w-[78%] px-4 py-2.5",
+                          m.role === "user"
+                            ? selectedPlanId === "university"
+                              ? "bg-gradient-to-br from-cyan-500 to-blue-600 text-white rounded-[20px] rounded-tr-[5px] shadow-md shadow-cyan-500/20"
+                              : "bg-gradient-to-br from-purple-600 to-violet-600 text-white rounded-[20px] rounded-tr-[5px] shadow-md shadow-purple-500/20"
+                            : "bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/60 rounded-[20px] rounded-tl-[5px] shadow-sm text-slate-800 dark:text-slate-100"
+                        )}
+                      >
+                        {m.role === "assistant"
+                          ? <MarkdownRenderer content={m.content} />
+                          : <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.content}</p>
+                        }
+                      </motion.div>
+                    </div>
+                  )
+                })}
               </AnimatePresence>
             )}
             {isLoading && (
-              <div className="w-full flex justify-start">
-                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-purple-600" /><span className="text-sm opacity-60">{selectedPlanId === "university" ? "Thinking en profundidad..." : "Razonando..."}</span>
+              <div className="flex justify-start items-end gap-2 mt-4">
+                <div className={cn(
+                  "w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center shadow-sm",
+                  selectedPlanId === "university" ? "bg-gradient-to-br from-cyan-500 to-blue-600 shadow-cyan-500/20" : "bg-gradient-to-br from-purple-600 to-pink-500 shadow-purple-500/20"
+                )}>
+                  {selectedPlanId === "university" ? <Brain className="w-3.5 h-3.5 text-white" /> : <Bot className="w-3.5 h-3.5 text-white" />}
+                </div>
+                <div className={cn(
+                  "border px-4 py-3.5 rounded-[20px] rounded-tl-[5px] shadow-sm flex items-center gap-2",
+                  selectedPlanId === "university"
+                    ? "bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950/30 dark:to-blue-950/30 border-cyan-100 dark:border-cyan-900/40"
+                    : "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700/60"
+                )}>
+                  <span className={cn("w-2 h-2 rounded-full animate-bounce", selectedPlanId === "university" ? "bg-cyan-400" : "bg-slate-300 dark:bg-slate-500")} style={{ animationDelay: "0ms", animationDuration: "1s" }} />
+                  <span className={cn("w-2 h-2 rounded-full animate-bounce", selectedPlanId === "university" ? "bg-cyan-400" : "bg-slate-300 dark:bg-slate-500")} style={{ animationDelay: "180ms", animationDuration: "1s" }} />
+                  <span className={cn("w-2 h-2 rounded-full animate-bounce", selectedPlanId === "university" ? "bg-cyan-400" : "bg-slate-300 dark:bg-slate-500")} style={{ animationDelay: "360ms", animationDuration: "1s" }} />
+                  {selectedPlanId === "university" && <span className="text-[11px] text-cyan-600 dark:text-cyan-400 font-medium ml-1">Analizando en profundidad...</span>}
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="border-t border-slate-200 dark:border-slate-800 p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl relative">
+          <div className="sticky bottom-0 z-10 border-t border-slate-100 dark:border-slate-800/80 px-3 pt-2.5 pb-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl relative">
             <AnimatePresence>
               {showSimMenu && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-full left-4 mb-2 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 min-w-[240px]">
-                  <p className="text-xs font-bold text-slate-500 p-2 uppercase">Temas disponibles:</p>
-                  <div className="flex flex-col gap-1">
+                <motion.div initial={{ opacity: 0, y: 10, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.97 }} className="absolute bottom-full left-3 mb-2 p-2 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-100 dark:border-slate-700/60 rounded-2xl shadow-2xl z-50 min-w-[240px]">
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 px-3 pt-2 pb-1 uppercase tracking-widest">Temas disponibles</p>
+                  <div className="flex flex-col gap-0.5">
                     {["Mixto", "Matemáticas", "Lengua", "Inglés", "Sociales", "Naturales", "TIC (Tecnología)"].map(t => (
-                      <button key={t} onClick={() => handleSimOption(t)} className="text-left px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl text-sm">Simulador de {t}</button>
+                      <button key={t} onClick={() => handleSimOption(t)} className="text-left px-3 py-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl text-sm text-slate-700 dark:text-slate-200 transition-colors">Simulador de {t}</button>
                     ))}
                   </div>
-                  <div className="border-t border-slate-100 dark:border-slate-700 mt-2 pt-2">
-                    <p className="text-xs font-bold text-slate-500 p-2 uppercase">Datasets disponibles</p>
-                    <div className="flex flex-col gap-1 px-2 pb-1">
+                  <div className="border-t border-slate-100 dark:border-slate-700/50 mt-2 pt-2">
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 px-3 pb-1 uppercase tracking-widest">Datasets disponibles</p>
+                    <div className="flex flex-col gap-0.5 px-1 pb-1">
                       {datasets.length === 0 ? (
-                        <div className="text-xs text-slate-400 px-2 py-1">No hay datasets disponibles</div>
+                        <div className="text-xs text-slate-400 px-3 py-1">No hay datasets disponibles</div>
                       ) : (
                         datasets.map(ds => (
-                          <button key={ds} onClick={() => { setSelectedDataset(ds); setShowSimMenu(false) }} className={cn("text-left px-3 py-2 rounded-xl text-sm w-full truncate", selectedDataset === ds ? "bg-purple-50 dark:bg-purple-900/20" : "hover:bg-slate-50 dark:hover:bg-slate-800/20")}>
+                          <button key={ds} onClick={() => { setSelectedDataset(ds); setShowSimMenu(false) }} className={cn("text-left px-3 py-2 rounded-xl text-sm w-full truncate transition-colors", selectedDataset === ds ? "bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300" : "hover:bg-slate-50 dark:hover:bg-slate-700/30 text-slate-700 dark:text-slate-200")}>
                             {ds}
                           </button>
                         ))
                       )}
-                      {selectedDataset && <div className="text-xs text-slate-500 px-2 py-1">Seleccionado: {selectedDataset}</div>}
+                      {selectedDataset && <div className="text-[11px] text-purple-500 px-3 py-1 flex items-center gap-1"><span>✓</span>{selectedDataset}</div>}
                     </div>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
-            <div className="max-w-5xl mx-auto flex items-end gap-2">
-              <div className="flex-1 flex flex-col gap-2 md:gap-1 mb-1">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex gap-1">
-                    {QUICK_ACTIONS.map((a, i) => (
-                      <button key={i} onClick={() => handleQuickAction(a.prompt)} className={cn("p-2.5 rounded-xl border transition-all bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700", a.glow, a.border, showSimMenu && a.label === "Simuladores" && "bg-purple-100 dark:bg-purple-900 border-purple-400")} title={a.label}>
-                        <a.icon className={cn("w-5 h-5", a.color)} />
-                      </button>
-                    ))}
-                  </div>
-                  {isLocalhost && (
-                    <button type="button" onClick={clearLocalMemory} className="text-[11px] text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors">
-                      DEBUG: borrar memoria
-                    </button>
-                  )}
-                </div>
-                <textarea ref={textareaRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder="Escribe tu mensaje..." className="w-full resize-none rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 min-h-[50px] shadow-sm" rows={1} />
+            <div className="max-w-5xl mx-auto space-y-2">
+              {/* Quick action pills */}
+              <div className="flex items-center gap-1.5 px-1 overflow-x-auto scrollbar-hide">
+{(selectedPlanId === "university" ? UNIVERSITY_QUICK_ACTIONS : QUICK_ACTIONS).map((a, i) => (
+                  <button key={i} onClick={() => handleQuickAction(a.prompt)} className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all whitespace-nowrap flex-shrink-0 active:scale-95 hover:scale-105", selectedPlanId === "university" ? "bg-white/90 dark:bg-slate-800/80 border-cyan-200/60 dark:border-slate-700/60" : "bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60", a.color, a.border, showSimMenu && (a.label === "Simulacros" || a.label === "Simulacro") && "!bg-purple-50 dark:!bg-purple-900/30 border-purple-400")}>
+                    <a.icon className="w-3.5 h-3.5" />
+                    <span>{a.label}</span>
+                  </button>
+                ))}
+                {isLocalhost && (
+                  <button type="button" onClick={clearLocalMemory} className="ml-auto text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors whitespace-nowrap flex-shrink-0 pl-2">
+                    DEBUG: borrar
+                  </button>
+                )}
               </div>
-              <button onClick={() => sendMessage()} disabled={!input.trim() || isLoading || isGeneratingPracticePdf} className="bg-gradient-to-r from-purple-600 to-pink-600 p-3.5 rounded-2xl text-white shadow-md active:scale-95 disabled:opacity-50">
-                {isGeneratingPracticePdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-              </button>
+              {/* Input row */}
+              <div className="flex items-end gap-2">
+                <div className={cn(
+                  "flex-1 flex items-end bg-slate-100/90 dark:bg-slate-800/80 rounded-3xl px-4 py-2.5 border transition-colors",
+                  selectedPlanId === "university"
+                    ? "border-slate-200/50 dark:border-slate-700/40 focus-within:border-cyan-400/60 dark:focus-within:border-cyan-500/50"
+                    : "border-slate-200/50 dark:border-slate-700/40 focus-within:border-purple-400/60 dark:focus-within:border-purple-500/50"
+                )}>
+                  <textarea ref={textareaRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={selectedPlanId === "university" ? "Pregunta, pide diagnóstico, plan de estudio..." : "Mensaje..."} className="flex-1 resize-none bg-transparent text-sm focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 leading-relaxed py-0.5 max-h-[120px]" rows={1} />
+                </div>
+                <button onClick={() => sendMessage()} disabled={!input.trim() || isLoading || isGeneratingPracticePdf} className={cn("w-9 h-9 rounded-full flex items-center justify-center transition-all flex-shrink-0 mb-0.5", input.trim() && !isLoading && !isGeneratingPracticePdf
+                    ? selectedPlanId === "university"
+                      ? "bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 active:scale-90"
+                      : "bg-gradient-to-br from-purple-600 to-violet-600 text-white shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-90"
+                    : "bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed")}>
+                  {isGeneratingPracticePdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           </div>
         </>
