@@ -28,7 +28,7 @@ export function LayoutContent({ children, latestProject }: LayoutContentProps) {
       {/* Pasamos los datos del proyecto a la Navbar */}
       {!isAdmin && <BlogNav latestProject={latestProject ?? undefined} />}
       {isEduIA ? (
-        <main className="h-screen pt-20 md:pt-24 flex flex-col overflow-hidden">
+        <main className="h-screen pt-24 flex flex-col overflow-hidden">
           {children}
         </main>
       ) : (

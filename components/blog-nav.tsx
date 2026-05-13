@@ -31,6 +31,8 @@ export function BlogNav({ latestProject }: { latestProject?: LatestProject | nul
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const pathname = usePathname()
+  const isEduIA = pathname?.startsWith("/eduia")
+  const compactNav = scrolled || isEduIA
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
@@ -43,7 +45,7 @@ export function BlogNav({ latestProject }: { latestProject?: LatestProject | nul
       <nav 
         className={cn(
           "pointer-events-auto relative flex items-center justify-between w-[98%] max-w-[1800px] mx-auto px-4 sm:px-8 transition-all duration-500 ease-in-out",
-          scrolled 
+          compactNav
             ? "py-3 rounded-[2rem] bg-white/90 dark:bg-slate-950/70 backdrop-blur-xl border border-slate-300 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.1)]" 
             : "py-5 rounded-none bg-transparent border-transparent"
         )}
@@ -72,7 +74,7 @@ export function BlogNav({ latestProject }: { latestProject?: LatestProject | nul
         {/* CENTRO: Enlaces de navegación */}
         <div className={cn(
           "hidden md:flex items-center p-1 rounded-full border transition-all duration-500",
-          scrolled 
+          compactNav
             ? "bg-slate-200/50 dark:bg-white/5 border-slate-300 dark:border-white/5 backdrop-blur-sm" 
             : "bg-black/5 border-black/10 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm"
         )}>
@@ -90,7 +92,7 @@ export function BlogNav({ latestProject }: { latestProject?: LatestProject | nul
                         ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg hover:shadow-xl hover:scale-105"
                         : isActive
                         ? "text-blue-600 dark:text-blue-400"
-                        : scrolled 
+                        : compactNav
                           ? "text-black/60 hover:text-black dark:text-slate-400 dark:hover:text-white" 
                           : "text-black/70 hover:text-black dark:text-white/80 dark:hover:text-white"
                     )}
@@ -121,7 +123,7 @@ export function BlogNav({ latestProject }: { latestProject?: LatestProject | nul
           </div>
           <div className={cn(
             "hidden md:flex p-1 rounded-full border transition-all",
-            scrolled 
+            compactNav
               ? "bg-white dark:bg-white/5 border-slate-300 dark:border-white/10 shadow-sm" 
               : "bg-black/5 border-black/10 dark:bg-white/10 dark:border-white/20"
           )}>
@@ -134,7 +136,7 @@ export function BlogNav({ latestProject }: { latestProject?: LatestProject | nul
               onClick={() => setIsOpen(!isOpen)}
               className={cn(
                 "p-2.5 rounded-full border transition-all pointer-events-auto",
-                scrolled 
+                compactNav
                   ? "bg-white dark:bg-slate-900 border-slate-300 dark:border-white/10 text-black dark:text-white" 
                   : "bg-black/5 border-black/10 dark:bg-white/10 dark:border-white/20 text-black dark:text-white backdrop-blur-md"
               )}
