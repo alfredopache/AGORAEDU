@@ -381,10 +381,7 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
   }, [datasets, selectedSubGoal])
 
   useEffect(() => {
-    const shouldLoad =
-      (selectedGoal === "fp" && !!selectedSubGoal && !!selectedContext) ||
-      (selectedGoal === "basico" && !!selectedContext) ||
-      (selectedGoal === "eso" && !!selectedContext)
+    const shouldLoad = selectedGoal === "fp" && !!selectedSubGoal && !!selectedContext
 
     if (!shouldLoad) {
       setOfficialDownloadGroups([])
@@ -699,7 +696,7 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
             </div>
           )}
 
-          {((selectedGoal === "fp" && selectedSubGoal && selectedContext) || (selectedGoal === "basico" && selectedContext) || (selectedGoal === "eso" && selectedContext)) && (
+          {selectedGoal === "fp" && selectedSubGoal && selectedContext && (
             <div className="mt-4 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/60">
               <div className="flex items-center justify-between gap-3">
                 <div>
