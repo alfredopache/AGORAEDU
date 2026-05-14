@@ -19,6 +19,18 @@ interface Message {
   timestamp: Date
 }
 
+interface OfficialDownloadGroup {
+  key: string
+  label: string
+  note?: string
+  items: Array<{
+    filename: string
+    topic: string
+    sizeKb: number
+    downloadUrl: string
+  }>
+}
+
 interface ChatModeProps {
   sessionId: string
   conversationId: string | null
@@ -261,6 +273,9 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null)
   const [selectedSubGoal, setSelectedSubGoal] = useState<string | null>(null)
   const [selectedContext, setSelectedContext] = useState<string | null>(null)
+  const [officialDownloadGroups, setOfficialDownloadGroups] = useState<OfficialDownloadGroup[]>([])
+  const [officialDownloadNote, setOfficialDownloadNote] = useState<string | null>(null)
+  const [isLoadingOfficialDownloads, setIsLoadingOfficialDownloads] = useState(false)
   const [onboardingStep, setOnboardingStep] = useState(0) // 0=welcome, 1-10=questions
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [profileDraft, setProfileDraft] = useState<Partial<UserProfile>>({
@@ -364,6 +379,47 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
       if (gm) setSelectedDataset(gm)
     }
   }, [datasets, selectedSubGoal])
+
+  useEffect(() => {
+    const shouldLoad =
+      (selectedGoal === "fp" && !!selectedSubGoal && !!selectedContext) ||
+      (selectedGoal === "basico" && !!selectedContext) ||
+      (selectedGoal === "eso" && !!selectedContext)
+
+    if (!shouldLoad) {
+      setOfficialDownloadGroups([])
+      setOfficialDownloadNote(null)
+      return
+    }
+
+    const controller = new AbortController()
+    const loadOfficialDownloads = async () => {
+      try {
+        setIsLoadingOfficialDownloads(true)
+        const params = new URLSearchParams({
+          goal: selectedGoal || "",
+          level: selectedSubGoal || "",
+          context: selectedContext || "",
+        })
+        const response = await fetch(`/api/exam/official-resources?${params.toString()}`, { signal: controller.signal })
+        if (!response.ok) {
+          throw new Error("No se pudieron cargar las descargas")
+        }
+        const data = await response.json()
+        setOfficialDownloadGroups(Array.isArray(data?.groups) ? data.groups : [])
+        setOfficialDownloadNote(data?.note ? String(data.note) : null)
+      } catch (error) {
+        if ((error as Error).name === "AbortError") return
+        setOfficialDownloadGroups([])
+        setOfficialDownloadNote("No se han podido cargar las descargas ahora mismo.")
+      } finally {
+        setIsLoadingOfficialDownloads(false)
+      }
+    }
+
+    loadOfficialDownloads()
+    return () => controller.abort()
+  }, [selectedGoal, selectedSubGoal, selectedContext])
 
   const saveProfile = (draft?: Partial<UserProfile>) => {
     const p = (draft || profileDraft) as UserProfile
@@ -642,6 +698,51 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
               ))}
             </div>
           )}
+
+          {((selectedGoal === "fp" && selectedSubGoal && selectedContext) || (selectedGoal === "basico" && selectedContext) || (selectedGoal === "eso" && selectedContext)) && (
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/60">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h5 className="text-sm font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">Descargas oficiales</h5>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Material filtrado para {selectedContext}.</p>
+                </div>
+                {isLoadingOfficialDownloads ? <Loader2 className="h-4 w-4 animate-spin text-slate-400" /> : null}
+              </div>
+
+              {officialDownloadNote && (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/20 dark:bg-amber-900/20 dark:text-amber-200">
+                  {officialDownloadNote}
+                </div>
+              )}
+
+              {officialDownloadGroups.length > 0 && (
+                <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                  {officialDownloadGroups.map((group) => (
+                    <div key={group.key} className="rounded-xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/40">
+                      <p className="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-100">{group.label}</p>
+                      {group.note ? <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">{group.note}</p> : null}
+                      <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
+                        {group.items.map((item) => (
+                          <a
+                            key={`${group.key}-${item.downloadUrl}`}
+                            href={item.downloadUrl}
+                            className="block rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs transition hover:border-purple-300 hover:bg-purple-50 dark:border-slate-700 dark:bg-slate-900/60 dark:hover:border-purple-500 dark:hover:bg-purple-900/20"
+                          >
+                            <span className="block font-medium text-slate-800 dark:text-slate-100">{item.filename}</span>
+                            <span className="mt-0.5 block text-[11px] text-slate-500 dark:text-slate-400">{item.topic} · {item.sizeKb} KB</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!isLoadingOfficialDownloads && !officialDownloadNote && officialDownloadGroups.length === 0 && (
+                <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">No hay descargas disponibles para esta selección todavía.</p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="w-full max-w-2xl">
@@ -689,6 +790,14 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
       setMessages([])
     }
   }, [conversationId])
+
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    textarea.style.height = "0px"
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`
+  }, [input])
 
   const loadConversation = async (id: string) => {
     setIsLoadingConversation(true)
@@ -1050,21 +1159,6 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
                       <button key={t} onClick={() => handleSimOption(t)} className="text-left px-3 py-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl text-sm text-slate-700 dark:text-slate-200 transition-colors">Simulador de {t}</button>
                     ))}
                   </div>
-                  <div className="border-t border-slate-100 dark:border-slate-700/50 mt-2 pt-2">
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 px-3 pb-1 uppercase tracking-widest">Datasets disponibles</p>
-                    <div className="flex flex-col gap-0.5 px-1 pb-1">
-                      {datasets.length === 0 ? (
-                        <div className="text-xs text-slate-400 px-3 py-1">No hay datasets disponibles</div>
-                      ) : (
-                        datasets.map(ds => (
-                          <button key={ds} onClick={() => { setSelectedDataset(ds); setShowSimMenu(false) }} className={cn("text-left px-3 py-2 rounded-xl text-sm w-full truncate transition-colors", selectedDataset === ds ? "bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300" : "hover:bg-slate-50 dark:hover:bg-slate-700/30 text-slate-700 dark:text-slate-200")}>
-                            {ds}
-                          </button>
-                        ))
-                      )}
-                      {selectedDataset && <div className="text-[11px] text-purple-500 px-3 py-1 flex items-center gap-1"><span>✓</span>{selectedDataset}</div>}
-                    </div>
-                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1086,12 +1180,12 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
               {/* Input row */}
               <div className="flex items-end gap-2">
                 <div className={cn(
-                  "flex-1 flex items-end bg-slate-100/90 dark:bg-slate-800/80 rounded-3xl px-4 py-2.5 border transition-colors",
+                  "flex-1 flex items-end bg-slate-100/90 dark:bg-slate-800/80 rounded-3xl px-4 py-3 border transition-colors",
                   selectedPlanId === "university"
                     ? "border-slate-200/50 dark:border-slate-700/40 focus-within:border-cyan-400/60 dark:focus-within:border-cyan-500/50"
                     : "border-slate-200/50 dark:border-slate-700/40 focus-within:border-purple-400/60 dark:focus-within:border-purple-500/50"
                 )}>
-                  <textarea ref={textareaRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={selectedPlanId === "university" ? "Pregunta, pide diagnóstico, plan de estudio..." : "Mensaje..."} className="flex-1 resize-none bg-transparent text-sm focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 leading-relaxed py-0.5 max-h-[120px]" rows={1} />
+                  <textarea ref={textareaRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={selectedPlanId === "university" ? "Pregunta, pide diagnóstico, plan de estudio..." : "Mensaje..."} className="flex-1 resize-none overflow-hidden bg-transparent text-sm focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 leading-relaxed py-1 min-h-[72px] max-h-[180px]" rows={3} />
                 </div>
                 <button onClick={() => sendMessage()} disabled={!input.trim() || isLoading || isGeneratingPracticePdf} className={cn("w-9 h-9 rounded-full flex items-center justify-center transition-all flex-shrink-0 mb-0.5", input.trim() && !isLoading && !isGeneratingPracticePdf
                     ? selectedPlanId === "university"

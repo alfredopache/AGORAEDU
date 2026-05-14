@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { client } from "@/sanity/lib/client"
 import fs from 'fs/promises'
 import path from 'path'
+import { enrichDatasetQuestion } from "@/lib/dataset-question-enrichment"
 
 export async function GET(request: NextRequest) {
   try {
@@ -56,6 +57,27 @@ export async function GET(request: NextRequest) {
       const parts = raw.split(/\s*\|\s*|;|\r?\n/).map(s => s.trim()).filter(Boolean)
       const cleaned = parts.map(p => p.replace(/^[A-Z]\)\s*/i, '').replace(/^[A-Z]\.\s*/i, '').replace(/^\([A-Z]\)\s*/i, '').trim())
       return cleaned
+    }
+
+    function hasPlaceholderClosedOptions(options: string[]) {
+      if (!Array.isArray(options) || options.length === 0) return false
+      const normalizedOptions = options.map((option) => normalizeText(option))
+      const placeholderPatterns = [
+        /opcion correcta/,
+        /opcion parcialmente correcta/,
+        /opcion incorrecta/,
+        /otra herramienta o componente/,
+        /claramente incorrecta/,
+        /incorrecta plausible/,
+      ]
+      return normalizedOptions.every((option) => placeholderPatterns.some((pattern) => pattern.test(option)))
+    }
+
+    function hasMeaningfulSupportText(item: any) {
+      const fields = [item.Explicación, item.RUBRICA_MODELO, item.RESPUESTA_MODELO_EXCELENTE, item.Explicacion, item.RESPUESTA_MODELO]
+        .filter(Boolean)
+        .map((value) => String(value).trim())
+      return fields.some((value) => value.length >= 20 && !/^ver respuesta modelo/i.test(value))
     }
 
     function parseCorrectIndex(resp: string | undefined, options: string[]) {
@@ -144,13 +166,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Normalizar preguntas
-    const normalized = items.map((item: any) => {
+    const normalized = items.map((item: any, idx: number) => {
       const idUnico = item.ID_Unico || (item.ID ? `ID-${item.ID}` : undefined)
       const _id = idUnico ? `examQuestion-${idUnico}` : `examQuestion-dataset-${Math.random().toString(36).slice(2, 9)}`
       const optionsText = parseClosedOptions(item.OPCIONES_CERRADAS || item.OPCIONES || item.OPTIONS || '')
-      const correctIndex = parseCorrectIndex(item.RESPUESTA_CORRECTA || item.RESPUESTA_MODELO || item.RESPUESTA_MODELO_EXCELENTE || item.RESPUESTA || '', optionsText)
+      const placeholderOptions = hasPlaceholderClosedOptions(optionsText)
+      const enrichment = enrichDatasetQuestion(item, optionsText, idx)
+      const finalOptionsText = enrichment?.options || optionsText
+      const correctIndex = typeof enrichment?.correctIndex === 'number'
+        ? enrichment.correctIndex
+        : parseCorrectIndex(item.RESPUESTA_CORRECTA || item.RESPUESTA_MODELO || item.RESPUESTA_MODELO_EXCELENTE || item.RESPUESTA || '', finalOptionsText)
 
-      const options = optionsText.length > 0 ? optionsText.map((t: string, i: number) => ({ text: t, isCorrect: i === correctIndex })) : undefined
+      const options = finalOptionsText.length > 0 ? finalOptionsText.map((t: string, i: number) => ({ text: t, isCorrect: i === correctIndex })) : undefined
       
       const textReference = (item.TEXTO_REFERENCIA || item.texto_referencia || item.textReference || '')
       const reqImages: string[] = []
@@ -170,15 +197,17 @@ export async function GET(request: NextRequest) {
 
       return {
         _id,
-        question: item.Pregunta || item.question || item.enunciado || item.PREGUNTA || 'Sin enunciado',
+        question: enrichment?.question || item.Pregunta || item.question || item.enunciado || item.PREGUNTA || 'Sin enunciado',
         subject: mapSubject(item.Materia || item.materia || item.SUBJETO || item.SUBJECT),
-        topic: item.Tema || item.SUBTEMA || item.topic || '',
+        topic: enrichment?.topic || item.Tema || item.SUBTEMA || item.topic || '',
         difficulty: mapDifficulty(item.Dificultad || item.DIFICULTAD || item.Nivel || item.NIVEL || ''),
         options,
-        explanation: [item.Explicación, item.RUBRICA_MODELO, item.RESPUESTA_MODELO_EXCELENTE, item.Explicacion].filter(Boolean).join('\n\n'),
+        explanation: [enrichment?.explanation, item.Explicación, item.RUBRICA_MODELO, item.RESPUESTA_MODELO_EXCELENTE, item.Explicacion].filter(Boolean).join('\n\n'),
         source: { name: srcName, year: srcYear || null, region: item.Region || item.REGION || item.Comunidad || item.COMUNIDAD || 'Nacional', url: srcUrl || null },
         original: item,
         isActive: isItemActive(item),
+        hasPlaceholderOptions: placeholderOptions,
+        hasMeaningfulSupport: hasMeaningfulSupportText(item),
         textReference,
         reqImages,
       }
@@ -199,6 +228,7 @@ export async function GET(request: NextRequest) {
 
     // Filtrar por isActive
     const activeOnly = normalizedUnique.filter((q: any) => q.isActive)
+    const activePreferred = activeOnly.filter((q: any) => !q.hasPlaceholderOptions)
 
     // Mapas para ámbitos compuestos (mantener compatibilidad con UI)
     const AMBITO_MAP: Record<string, string[]> = {
@@ -207,11 +237,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Filter by subject first (no difficulty hard-filter — fallback to any difficulty)
-    let subjectPool: any[] = activeOnly
+    let subjectPool: any[] = activePreferred.length > 0 ? activePreferred : activeOnly
     if (subject !== 'mixto') {
       if (AMBITO_MAP[subject]) {
         const subs = AMBITO_MAP[subject]
-        subjectPool = activeOnly.filter((q: any) => subs.includes(q.subject))
+        const scopedPreferred = activePreferred.filter((q: any) => subs.includes(q.subject))
+        const scopedActive = activeOnly.filter((q: any) => subs.includes(q.subject))
+        subjectPool = scopedPreferred.length > 0 ? scopedPreferred : scopedActive
       } else {
         let subjParam = subject
         let topicParam: string | undefined = undefined
@@ -222,9 +254,11 @@ export async function GET(request: NextRequest) {
         }
 
         const subjectCandidates = subjectPool.filter((q: any) => q.subject === subjParam)
+        const subjectFallbackCandidates = activeOnly.filter((q: any) => q.subject === subjParam)
+        const scopedSubjectCandidates = subjectCandidates.length > 0 ? subjectCandidates : subjectFallbackCandidates
         if (topicParam) {
           const topicNormalized = normalizeText(topicParam)
-          const topicCandidates = subjectCandidates.filter((q: any) => {
+          const topicCandidates = scopedSubjectCandidates.filter((q: any) => {
             const topicMatch = normalizeText(q.topic || q.original?.Tema || q.original?.SUBTEMA || q.original?.topic)
             const questionMatch = normalizeText(q.question)
             const sourceMatch = normalizeText(q.source?.name)
@@ -234,9 +268,9 @@ export async function GET(request: NextRequest) {
               sourceMatch.includes(topicNormalized)
             )
           })
-          subjectPool = topicCandidates.length > 0 ? topicCandidates : subjectCandidates
+          subjectPool = topicCandidates.length > 0 ? topicCandidates : scopedSubjectCandidates
         } else {
-          subjectPool = subjectCandidates
+          subjectPool = scopedSubjectCandidates
         }
       }
     }

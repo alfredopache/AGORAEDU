@@ -15,10 +15,13 @@ import {
   Award,
   GraduationCap,
   Lightbulb,
+  FileDown,
+  SlidersHorizontal,
 } from "lucide-react"
 import { cn, clampRedactionText, getWordCount, getLineCount, MAX_REDACTION_LINES, MAX_REDACTION_WORDS, formatExamSource } from "@/lib/utils"
 import { CableMatch, isMatchingQuestion, extractMatchPairsFromOptions } from "./cable-match"
 import { PdfReferenceImage } from "./pdf-reference-image"
+import { downloadPracticeExamPdf } from "@/lib/practice-exam-pdf"
 
 const motion = motionBase as any
 
@@ -65,9 +68,14 @@ const SUBJECT_OPTIONS = [
   { value: "tic",        label: "TIC",                            emoji: "💻", color: "from-green-400 to-teal-500" },
 ]
 
+const DEFAULT_DATASET_FILE = "W5_dataset_ACCESO_IA_examenes_2017_2025_v3_GOLD_INFRA_READY.json"
+const QUESTIONS_PER_SUBJECT = 5
+
 export function ExamMode({ sessionId }: ExamModeProps) {
   const [examState, setExamState] = useState<ExamState>("setup")
   const [selectedSubject, setSelectedSubject] = useState<string>("")
+  const [selectedCustomSubjects, setSelectedCustomSubjects] = useState<string[]>(SUBJECT_OPTIONS.map((subject) => subject.value))
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false)
 
   const GM_PDFS: Record<string, string> = {
     '2017': 'https://ceice.gva.es/documents/388109149/391038839/GM_2017.pdf',
@@ -105,7 +113,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
     return { type: 'text', value: img }
   }
   const selectedDifficulty = "intermedio"
-  const questionCount = 5
+  const questionCount = QUESTIONS_PER_SUBJECT
   const [secondsPerQuestion] = useState<number>(90)
   
   const [questions, setQuestions] = useState<ExamQuestion[]>([])
@@ -134,7 +142,9 @@ export function ExamMode({ sessionId }: ExamModeProps) {
     try {
       const raw = localStorage.getItem(seenKey(subject))
       return raw ? JSON.parse(raw) : []
-    } catch { return [] }
+    } catch {
+      return []
+    }
   }
 
   const addSeenIds = (subject: string, ids: string[]) => {
@@ -143,6 +153,41 @@ export function ExamMode({ sessionId }: ExamModeProps) {
       const merged = [...new Set([...existing, ...ids])]
       localStorage.setItem(seenKey(subject), JSON.stringify(merged))
     } catch {}
+  }
+
+  const selectedCustomQuestionCount = selectedCustomSubjects.length * QUESTIONS_PER_SUBJECT
+
+  const shuffleQuestions = <T,>(items: T[]) => {
+    const copy = [...items]
+    for (let i = copy.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[copy[i], copy[j]] = [copy[j], copy[i]]
+    }
+    return copy
+  }
+
+  const fetchQuestionsForSubject = async (subjectName: string, count: number) => {
+    const seenIds = getSeenIds(subjectName)
+    const params = new URLSearchParams({
+      subject: subjectName,
+      difficulty: selectedDifficulty,
+      count: String(count),
+    })
+    if (seenIds.length > 0) {
+      params.set("exclude", seenIds.join(","))
+    }
+
+    const response = await fetch(`/api/exam/questions?${params.toString()}`)
+    if (!response.ok) {
+      throw new Error(`Error obteniendo preguntas de ${subjectName}`)
+    }
+
+    const data = await response.json()
+    const fetchedQuestions = Array.isArray(data?.questions) ? data.questions : []
+    if (fetchedQuestions.length > 0) {
+      addSeenIds(subjectName, fetchedQuestions.map((question: ExamQuestion) => question._id))
+    }
+    return fetchedQuestions as ExamQuestion[]
   }
 
   useEffect(() => {
@@ -169,13 +214,11 @@ export function ExamMode({ sessionId }: ExamModeProps) {
       }
 
       const response = await fetch(`/api/exam/questions?${params.toString()}`)
-      
       if (!response.ok) {
         throw new Error("Error obteniendo preguntas")
       }
 
       const data = await response.json()
-
       if (!data || !Array.isArray(data.questions) || data.questions.length === 0) {
         alert("No hay preguntas disponibles para esta materia. Intenta con otra.")
         setIsLoading(false)
@@ -194,6 +237,81 @@ export function ExamMode({ sessionId }: ExamModeProps) {
       alert("Error al cargar el examen. Por favor, intenta de nuevo.")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const startCustomExam = async (subjectsArg?: string[]) => {
+    const subjectsToUse = (subjectsArg ?? selectedCustomSubjects).filter(Boolean)
+    if (subjectsToUse.length === 0) {
+      alert("Selecciona al menos una asignatura.")
+      return
+    }
+
+    setSelectedSubject("todo")
+    setIsLoading(true)
+    try {
+      const resultSets = await Promise.all(
+        subjectsToUse.map((subjectName) => fetchQuestionsForSubject(subjectName, QUESTIONS_PER_SUBJECT)),
+      )
+
+      const combined = shuffleQuestions(resultSets.flat())
+      if (combined.length === 0) {
+        alert("No hay preguntas disponibles para esta configuración.")
+        return
+      }
+
+      setQuestions(combined)
+      setExamState("taking")
+      setStartTime(Date.now())
+      setQuestionStartTime(Date.now())
+      setTimeLeft(secondsPerQuestion)
+      setUserAnswers([])
+    } catch (error) {
+      console.error("Error:", error)
+      alert("Error al cargar el simulacro completo. Por favor, intenta de nuevo.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const toggleCustomSubject = (subjectName: string) => {
+    setSelectedCustomSubjects((current) => {
+      if (current.includes(subjectName)) {
+        if (current.length === 1) return current
+        return current.filter((value) => value !== subjectName)
+      }
+      return [...current, subjectName]
+    })
+  }
+
+  const downloadCustomExamPdf = async () => {
+    if (selectedCustomSubjects.length === 0) {
+      alert("Selecciona al menos una asignatura.")
+      return
+    }
+
+    setIsDownloadingPdf(true)
+    try {
+      const params = new URLSearchParams({
+        difficulty: selectedDifficulty,
+        subject: "todo",
+        subjects: selectedCustomSubjects.join(","),
+        perSubjectCount: String(QUESTIONS_PER_SUBJECT),
+        questionCount: String(selectedCustomQuestionCount),
+        dataset: DEFAULT_DATASET_FILE,
+        seed: String(Math.floor(Math.random() * 1e9)),
+      })
+      const response = await fetch(`/api/exam/practice-pack?${params.toString()}`)
+      if (!response.ok) {
+        throw new Error("No se pudo generar el PDF del simulacro")
+      }
+      const data = await response.json()
+      await downloadPracticeExamPdf(data.pack)
+    } catch (error) {
+      console.error(error)
+      alert("No se pudo generar el PDF del simulacro.")
+    } finally {
+      setIsDownloadingPdf(false)
     }
   }
 
@@ -356,6 +474,8 @@ export function ExamMode({ sessionId }: ExamModeProps) {
 
   // SETUP VIEW — simple subject picker
   if (examState === "setup") {
+    // Calcular aquí para evitar error de scope
+    const customQuestionCount = selectedCustomSubjects.length * QUESTIONS_PER_SUBJECT
     return (
       <div className="h-full overflow-y-auto">
         <div className="max-w-2xl mx-auto px-6 py-12">
@@ -367,32 +487,170 @@ export function ExamMode({ sessionId }: ExamModeProps) {
             <p className="text-slate-500 dark:text-slate-400">5 preguntas oficiales · responde y ve tu resultado al instante</p>
           </div>
 
+          {/* Descargas oficiales antes del simulacro */}
+          <div className="mb-10">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-md border border-slate-200 dark:border-slate-700">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">Descargas — AccesoIA (Valencia · Grado Medio y Superior)</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">Enlaces útiles y PDFs de pruebas de acceso oficiales (València, Grado Mitjà y Grado Superior). Puedes descargar los exámenes de ambas modalidades.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                <div>
+                  <h4 className="font-semibold mb-2 text-purple-700 dark:text-purple-300">Grado Medio</h4>
+                  <ul className="space-y-2">
+                    <li><a href="https://ceice.gva.es/documents/388109149/391038839/GM_2017.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2017 — Prueba de Acceso</a></li>
+                    <li><a href="https://ceice.gva.es/documents/388109149/391038839/GM_2018.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2018 — Prueba de Acceso</a></li>
+                    <li><a href="https://ceice.gva.es/documents/388109149/391038839/GM_2019.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2019 — Prueba de Acceso</a></li>
+                    <li><a href="https://ceice.gva.es/documents/388109149/391038839/GM_2020.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2020 — Prueba de Acceso</a></li>
+                    <li><a href="https://ceice.gva.es/documents/388109149/391038839/GM_2021.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2021 — Prueba de Acceso</a></li>
+                    <li><a href="https://ceice.gva.es/documents/388109149/391038839/GM_2022.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2022 — Prueba de Acceso</a></li>
+                    <li><a href="https://ceice.gva.es/documents/388109149/391038839/GM_2023.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2023 — Prueba de Acceso</a></li>
+                    <li><a href="https://ceice.gva.es/documents/388109149/391038839/GM_2024.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2024 — Prueba de Acceso</a></li>
+                    <li><a href="https://ceice.gva.es/documents/388109149/0/JUNTOS+GM+2025.pdf/eaff2543-5199-f592-6af1-aa689a78ea67" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2025 — Prueba de Acceso</a></li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-2 text-pink-700 dark:text-pink-300">Grado Superior</h4>
+                  <ul className="space-y-2">
+                    <li><a href="https://ceice.gva.es/documents/388109149/391038844/GS_2017.pdf" target="_blank" rel="noreferrer" className="text-pink-600 dark:text-pink-300 font-medium">GS 2017 — Prueba de Acceso</a></li>
+                    <li><a href="https://ceice.gva.es/documents/388109149/391038844/GS_2019.pdf" target="_blank" rel="noreferrer" className="text-pink-600 dark:text-pink-300 font-medium">GS 2019 — Prueba de Acceso</a></li>
+                    <li><a href="https://ceice.gva.es/documents/388109149/391038844/GS_2020.pdf" target="_blank" rel="noreferrer" className="text-pink-600 dark:text-pink-300 font-medium">GS 2020 — Prueba de Acceso</a></li>
+                    <li><a href="https://ceice.gva.es/documents/388109149/391038844/GS_2021.pdf" target="_blank" rel="noreferrer" className="text-pink-600 dark:text-pink-300 font-medium">GS 2021 — Prueba de Acceso</a></li>
+                    <li><a href="https://ceice.gva.es/documents/388109149/391038844/GS_2022.pdf" target="_blank" rel="noreferrer" className="text-pink-600 dark:text-pink-300 font-medium">GS 2022 — Prueba de Acceso</a></li>
+                    <li><a href="https://ceice.gva.es/documents/388109149/391038844/GS_2023.pdf" target="_blank" rel="noreferrer" className="text-pink-600 dark:text-pink-300 font-medium">GS 2023 — Prueba de Acceso</a></li>
+                    <li><a href="https://ceice.gva.es/documents/388109149/391038844/GS_2024.pdf" target="_blank" rel="noreferrer" className="text-pink-600 dark:text-pink-300 font-medium">GS 2024 — Prueba de Acceso</a></li>
+                    <li><a href="https://ceice.gva.es/documents/388109149/0/JUNTOS+GS+2025.pdf/5ea55736-65de-bb7b-f6be-3fd240962af0" target="_blank" rel="noreferrer" className="text-pink-600 dark:text-pink-300 font-medium">GS 2025 — Prueba de Acceso</a></li>
+                  </ul>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end">
+                <aside className="w-full max-w-xl rounded-2xl border border-pink-300/40 bg-pink-50/80 p-5 text-sm text-pink-950 shadow-sm dark:border-pink-500/20 dark:bg-pink-950/20 dark:text-pink-100">
+                  <p className="font-semibold text-pink-700 dark:text-pink-300">Cuadro explicativo: bloques A, B y C en GS</p>
+                  <ul className="mt-3 list-disc pl-5 space-y-2">
+                    <li><strong>Bloque A:</strong> Parte común. Incluye Lengua Castellana y Literatura, Valenciano y Lengua Extranjera (Inglés o Francés).</li>
+                    <li><strong>Bloque B:</strong> Parte específica. El aspirante elige una de estas tres opciones, y debe seleccionar 2 de las 3 materias posibles:
+                      <ul className="mt-2 list-decimal pl-5 space-y-1 text-sm">
+                        <li><strong>Opción A. Humanidades y Ciencias Sociales:</strong> Historia del mundo contemporáneo, Economía y Geografía. Accede a familias profesionales como Administración y Gestión, Comercio y Marketing, Hostelería y Turismo, Servicios Socioculturales y a la Comunidad.</li>
+                        <li><strong>Opción B. Tecnología:</strong> Dibujo Técnico, Tecnología Industrial y Física y Química. Accede a familias profesionales como Artes Gráficas, Artes y Artesanías, Edificación y Obra Civil, Electricidad y Electrónica, Energía y Agua, Fabricación Mecánica, Imagen y Sonido, Industrias Extractivas, Informática y Comunicaciones, Instalación y Mantenimiento, Madera, Mueble y Corcho.</li>
+                        <li><strong>Opción C. Ciencias:</strong> Materias vinculadas a otras ramas científicas o técnicas según convocatoria.</li>
+                      </ul>
+                    </li>
+                    <li><strong>Bloque C:</strong> Parte de opción. Permite elegir una materia adicional relacionada con la opción profesional o académica del alumno.</li>
+                  </ul>
+                  <p className="mt-3 font-medium text-pink-700 dark:text-pink-200">Exención de la parte específica</p>
+                  <p className="mt-1 text-xs text-pink-900 dark:text-pink-100">Sí, puedes eximirte de la parte específica del acceso a ciclos formativos de Grado Superior si acreditas al menos un año de experiencia laboral relacionada con la familia profesional del ciclo al que quieres acceder. Debes presentar la vida laboral y un certificado de empresa, o una declaración de actividades si eres autónomo.</p>
+                  <p className="mt-2 text-xs text-pink-900 dark:text-pink-100">Más información oficial: <a href="https://ceice.gva.es/es/web/formacion-profesional/pruebas-de-acceso-a-ciclos-formativos" target="_blank" rel="noreferrer" className="underline underline-offset-2">ceice.gva.es</a></p>
+                </aside>
+              </div>
+            </div>
+          </div>
+
           {isLoading ? (
             <div className="flex flex-col items-center gap-4 py-16">
               <Loader2 className="w-10 h-10 animate-spin text-violet-600" />
               <p className="text-slate-500 dark:text-slate-400 font-medium">Cargando preguntas…</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {SUBJECT_OPTIONS.map((sub) => (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {SUBJECT_OPTIONS.map((sub) => (
+                  <button
+                    key={sub.value}
+                    onClick={() => startExam(sub.value)}
+                    className={cn(
+                      "group relative flex items-center gap-4 p-5 rounded-2xl border-2 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg",
+                      selectedSubject === sub.value
+                        ? "border-violet-500 bg-violet-50 dark:bg-violet-900/20 shadow-md"
+                        : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-violet-300 dark:hover:border-violet-600"
+                    )}
+                  >
+                    <span className="text-4xl">{sub.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-slate-900 dark:text-white text-base leading-tight">{sub.label}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">5 preguntas</p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-violet-600 transition-colors flex-shrink-0" />
+                  </button>
+                ))}
                 <button
-                  key={sub.value}
-                  onClick={() => startExam(sub.value)}
+                  onClick={() => setSelectedSubject("todo")}
                   className={cn(
-                    "group relative flex items-center gap-4 p-5 rounded-2xl border-2 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg",
-                    selectedSubject === sub.value
-                      ? "border-violet-500 bg-violet-50 dark:bg-violet-900/20 shadow-md"
-                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-violet-300 dark:hover:border-violet-600"
+                    "group relative flex items-center gap-4 p-5 rounded-2xl border-2 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg sm:col-span-2",
+                    selectedSubject === "todo"
+                      ? "border-fuchsia-500 bg-fuchsia-50 dark:bg-fuchsia-900/20 shadow-md"
+                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-fuchsia-300 dark:hover:border-fuchsia-600"
                   )}
                 >
-                  <span className="text-4xl">{sub.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-900 dark:text-white text-base leading-tight">{sub.label}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">5 preguntas</p>
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-500 to-violet-600 text-white shadow-lg shadow-fuchsia-500/20">
+                    <SlidersHorizontal className="w-7 h-7" />
                   </div>
-                  <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-violet-600 transition-colors flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-900 dark:text-white text-base leading-tight">Todo</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Configura un simulacro aleatorio con 5 preguntas por asignatura</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-fuchsia-600 transition-colors flex-shrink-0" />
                 </button>
-              ))}
+              </div>
+
+              {selectedSubject === "todo" && (
+                <div className="rounded-3xl border border-fuchsia-200/70 dark:border-fuchsia-800/40 bg-white/90 dark:bg-slate-900/80 p-6 shadow-xl">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">Simulacro personalizado</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Cada examen mezcla 5 preguntas aleatorias por asignatura seleccionada. Puedes hacerlo online o descargar el PDF para imprimirlo en casa.</p>
+                    </div>
+                    <div className="rounded-2xl bg-fuchsia-50 dark:bg-fuchsia-950/30 px-4 py-3 text-sm font-semibold text-fuchsia-700 dark:text-fuchsia-300">
+                      {customQuestionCount} preguntas totales
+                    </div>
+                  </div>
+
+                  <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {SUBJECT_OPTIONS.map((subject) => {
+                      const active = selectedCustomSubjects.includes(subject.value)
+                      return (
+                        <button
+                          key={subject.value}
+                          type="button"
+                          onClick={() => toggleCustomSubject(subject.value)}
+                          className={cn(
+                            "flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-all",
+                            active
+                              ? "border-fuchsia-400 bg-fuchsia-50 dark:bg-fuchsia-900/20 text-fuchsia-700 dark:text-fuchsia-300"
+                              : "border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300"
+                          )}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="text-2xl">{subject.emoji}</span>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-sm">{subject.label}</p>
+                              <p className="text-xs opacity-75">5 preguntas aleatorias</p>
+                            </div>
+                          </div>
+                          <span className={cn("text-xs font-bold uppercase tracking-wide", active ? "text-fuchsia-600 dark:text-fuchsia-300" : "text-slate-400 dark:text-slate-500")}>{active ? "Activa" : "Inactiva"}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                    <button
+                      type="button"
+                      onClick={() => startCustomExam()}
+                      disabled={selectedCustomSubjects.length === 0}
+                      className="flex-1 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 px-5 py-4 text-white font-bold shadow-lg shadow-fuchsia-500/20 transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Empezar simulacro aleatorio
+                    </button>
+                    <button
+                      type="button"
+                      onClick={downloadCustomExamPdf}
+                      disabled={selectedCustomSubjects.length === 0 || isDownloadingPdf}
+                      className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-4 text-slate-800 dark:text-slate-100 font-semibold transition hover:border-fuchsia-300 dark:hover:border-fuchsia-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isDownloadingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                      Descargar PDF imprimible
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

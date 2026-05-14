@@ -111,9 +111,10 @@ export async function GET(request: NextRequest) {
     const seed = seedParam ? Number(seedParam) : Math.floor(Math.random() * 1e9)
     const rng = mulberry32(seed)
 
-    // Default distribution for "Grado Medio" (36 preguntas)
+    // Default distribution for "Grado Medio" y "Grado Superior" (36 preguntas)
     const presets: Record<string, Record<string, number>> = {
       gradoMedio: { lengua: 6, sociales: 9, ingles: 5, matematicas: 6, tic: 10 },
+      gradoSuperior: { lengua: 6, sociales: 9, ingles: 5, matematicas: 6, tic: 10 },
     }
 
     const distribution = presets[preset] || presets['gradoMedio']
