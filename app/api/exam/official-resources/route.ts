@@ -46,6 +46,11 @@ const GROUP_CONFIG = {
   opcion_c: { label: "Opción C · Ciencias" },
 } as const
 
+const BASICO_GROUPS = {
+  "Ámbito lingüístico-social": ["lengua", "ingles", "opcion_a"],
+  "Ámbito científico-tecnológico": ["matematicas", "tid", "opcion_b", "opcion_c"],
+} as const satisfies Record<string, Array<keyof typeof INDEX_BY_KEY>>
+
 async function readIndex(key: keyof typeof INDEX_BY_KEY) {
   const filePath = path.join(process.cwd(), "data", "asignaturas", INDEX_BY_KEY[key])
   const raw = await fs.readFile(filePath, "utf-8")
@@ -77,6 +82,17 @@ function dedupeByPath(items: ResourceItem[]) {
     seen.add(item.path)
     return true
   })
+}
+
+async function loadGroups(keys: Array<keyof typeof INDEX_BY_KEY>) {
+  const entries = await Promise.all(
+    keys.map(async (key) => {
+      const index = await readIndex(key)
+      return mapGroup(key, dedupeByPath(index.items))
+    })
+  )
+
+  return entries.filter((group) => group.items.length > 0)
 }
 
 export async function GET(request: NextRequest) {
@@ -117,7 +133,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (goal === "basico") {
-      note = "Todavía no hay PDFs oficiales de Grado Básico indexados en data/asignaturas para esta vista."
+      if (context === "Ámbito lingüístico-social" || context === "Ámbito científico-tecnológico") {
+        groups.push(...await loadGroups(BASICO_GROUPS[context]))
+        note = "Material oficial agrupado por ámbito a partir de los PDFs indexados que ya tienes en la biblioteca local."
+      } else {
+        note = "Selecciona un ámbito para ver el material relacionado disponible."
+      }
     }
 
     if (goal === "eso") {
