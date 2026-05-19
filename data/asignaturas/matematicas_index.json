@@ -9,55 +9,64 @@
       "filename": "Matematicas 17.pdf",
       "path": "data/asignaturas/Matematicas 17.pdf",
       "topic": "Matematicas 17",
-      "sizeKb": 164
+      "sizeKb": 164,
+      "year": 2017
     },
     {
       "filename": "Matemáticas 19.pdf",
       "path": "data/asignaturas/Matemáticas 19.pdf",
       "topic": "Matemáticas 19",
-      "sizeKb": 107
+      "sizeKb": 107,
+      "year": 2019
     },
     {
       "filename": "Matemáticas_18.pdf",
       "path": "data/asignaturas/Matemáticas_18.pdf",
       "topic": "Matemáticas 18",
-      "sizeKb": 366
+      "sizeKb": 366,
+      "year": 2018
     },
     {
       "filename": "Matemáticas_20.pdf",
       "path": "data/asignaturas/Matemáticas_20.pdf",
       "topic": "Matemáticas 20",
-      "sizeKb": 153
+      "sizeKb": 153,
+      "year": 2020
     },
     {
       "filename": "Matemáticas_21.pdf",
       "path": "data/asignaturas/Matemáticas_21.pdf",
       "topic": "Matemáticas 21",
-      "sizeKb": 129
+      "sizeKb": 129,
+      "year": 2021
     },
     {
       "filename": "Matemáticas_22.pdf",
       "path": "data/asignaturas/Matemáticas_22.pdf",
       "topic": "Matemáticas 22",
-      "sizeKb": 120
+      "sizeKb": 120,
+      "year": 2022
     },
     {
       "filename": "Matemáticas_23.pdf",
       "path": "data/asignaturas/Matemáticas_23.pdf",
       "topic": "Matemáticas 23",
-      "sizeKb": 103
+      "sizeKb": 103,
+      "year": 2023
     },
     {
       "filename": "Matemáticas_24.pdf",
       "path": "data/asignaturas/Matemáticas_24.pdf",
       "topic": "Matemáticas 24",
-      "sizeKb": 168
+      "sizeKb": 168,
+      "year": 2024
     },
     {
       "filename": "Matemáticas_25.pdf",
       "path": "data/asignaturas/Matemáticas_25.pdf",
       "topic": "Matemáticas 25",
-      "sizeKb": 190
+      "sizeKb": 190,
+      "year": 2025
     }
   ]
 }
