@@ -18,6 +18,7 @@ const navLinks = [
   { label: "Proyectos", href: "/proyectos" },
   { label: "Recursos", href: "/recursos" },
   { label: "Multimedia", href: "/multimedia" },
+  { label: "Carpetas", href: "/carpetas" },
   { label: "Acceso IA", href: "/eduia", special: true },
   { label: "Sobre nosotros", href: "/sobre-nosotros" },
 ]

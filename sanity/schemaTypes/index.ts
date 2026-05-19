@@ -12,22 +12,29 @@ import chatConversation from './chatConversation'
 import examQuestion from './examQuestion'
 import examAttempt from './examAttempt'
 import userStreak from './userStreak'
+import carpeta from './carpeta'
+import recursoImagen from './recursoImagen'
 
-export const schema: { types: SchemaTypeDefinition[] } = {
-  types: [
-    postType,
-    project,
-    category,
-    podcast,
-    resources,
-    member,
-    suggestion,
-    settings,
-    aboutSettings,
-    chatConversation,
-    examQuestion,
-    examAttempt,
-    userStreak,
-  ],
+// 1. Definimos el array de tipos plano
+const types: SchemaTypeDefinition[] = [
+  postType,
+  project,
+  carpeta,
+  category,
+  podcast,
+  resources,
+  member,
+  suggestion,
+  settings,
+  aboutSettings,
+  chatConversation,
+  examQuestion,
+  examAttempt,
+  userStreak,
+  recursoImagen,
+]
+
+// 2. Exportamos exactamente la constante "schema" que busca tu sanity.config.ts
+export const schema = {
+  types: types
 }
-  
