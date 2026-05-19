@@ -27,6 +27,44 @@ function hasPlaceholderClosedOptions(options: string[]) {
   })
 }
 
+function hasGenericCategoryOptions(options: string[]) {
+  if (!Array.isArray(options) || options.length < 2) return false
+  const genericPatterns = [
+    /^palabra con significado/i,
+    /^palabra con.*contrario/i,
+    /^palabra no relacionada/i,
+    /^expresion que contradice/i,
+    /^present simple$/i,
+    /^past simple$/i,
+    /^present continuous$/i,
+    /^present perfect$/i,
+    /^sustantivo$/i,
+    /^adjetivo$/i,
+    /^verbo$/i,
+    /^adverbio$/i,
+    /^correct according to the text$/i,
+    /^partly true but incomplete$/i,
+    /^not mentioned in the text$/i,
+    /^opposite to the text$/i,
+    /^translation that keeps the meaning/i,
+    /^literal but incorrect translation$/i,
+    /^translation with wrong tense$/i,
+    /^unrelated sentence$/i,
+    /^correct translation$/i,
+    /^incorrect translation$/i,
+    /^tipo [a-z]/i,
+    /^opcion [a-z]/i,
+  ]
+  const genericCount = options.filter((option) => genericPatterns.some((pattern) => pattern.test(option.trim()))).length
+  return genericCount >= Math.ceil(options.length * 0.75)
+}
+
+function isTaskDescriptionQuestion(question: string) {
+  const q = normalizeKey(question)
+  if (q.length > 150) return false
+  return /^(buscar|identificar|indicar|analizar|clasificar|completar|encontrar|explicar|calcular|resolver|determinar|reconocer|distinguir|localizar|senalar|define|describe|comenta|lee y|escribe|redacta|write|answer|find|complete|choose|select|read|translate)/i.test(q.trim())
+}
+
 function hasMeaningfulSupportText(item: any) {
   const fields = [item.Explicación, item.RUBRICA_MODELO, item.RESPUESTA_MODELO_EXCELENTE, item.Explicacion, item.explicacion, item.RESPUESTA_MODELO]
     .filter(Boolean)
@@ -84,6 +122,10 @@ function normalizeKey(value: any) {
     .toLowerCase()
 }
 
+function buildQuestionSignature(question: string, options: string[] = []) {
+  return [normalizeKey(question), ...options.map((option) => normalizeKey(option))].join('|')
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -119,28 +161,35 @@ export async function GET(request: NextRequest) {
           const optionsText = parseClosedOptions(item.OPCIONES_CERRADAS || item.OPCIONES || item.OPTIONS || item.opciones_cerradas || item.opciones || '')
           const placeholderOptions = hasPlaceholderClosedOptions(optionsText)
           const enrichment = enrichDatasetQuestion(item, optionsText, idx)
+          const finalQuestionText = enrichment?.question || item.Pregunta || item.pregunta || item.question || item.enunciado || 'Sin enunciado'
           const finalOptionsText = enrichment?.options || optionsText
+          const rawOptionsAreGeneric = !enrichment && isTaskDescriptionQuestion(finalQuestionText) && (hasGenericCategoryOptions(optionsText) || optionsText.length === 0)
+          const renderedOptionsText = rawOptionsAreGeneric ? [] : finalOptionsText
           const correctIndex = typeof enrichment?.correctIndex === 'number'
             ? enrichment.correctIndex
             : parseCorrectIndex(item.RESPUESTA_CORRECTA || item.RESPUESTA_MODELO || item.RESPUESTA || item.respuesta_correcta || '', finalOptionsText)
-          const options = finalOptionsText.length > 0 ? finalOptionsText.map((t: string, i: number) => ({ text: t, isCorrect: i === correctIndex })) : undefined
+          const options = renderedOptionsText.length > 0
+            ? renderedOptionsText.map((t: string, i: number) => ({ text: t, isCorrect: i === correctIndex }))
+            : undefined
           return {
             _id: `dataset-${idUnico}`,
-            question: enrichment?.question || item.Pregunta || item.pregunta || item.question || item.enunciado || 'Sin enunciado',
+            question: finalQuestionText,
             subject: mapDatasetSubject(item.Materia || item.materia || item.SUBJETO || item.SUBJECT || item.Tema || item.TEMA),
             topic: enrichment?.topic || item.Tema || item.SUBTEMA || item.topic || '',
             difficulty: mapDifficulty(item.Dificultad || item.DIFICULTAD || item.Nivel || item.NIVEL || item.nivel || ''),
             options,
             explanation: enrichment?.explanation || item.Explicación || item.RUBRICA_MODELO || item.RESPUESTA_MODELO_EXCELENTE || item.Explicacion || item.explicacion || '',
             hasPlaceholderOptions: placeholderOptions,
+            hasGenericOptions: rawOptionsAreGeneric,
             hasMeaningfulSupport: hasMeaningfulSupportText(item),
+            signature: buildQuestionSignature(finalQuestionText, renderedOptionsText),
             original: item,
           }
         })
 
         // Filter active items (assume available)
-        const activeOnly = normalized
-        const preferredOnly = normalized.filter((item) => !item.hasPlaceholderOptions)
+        const activeOnly = normalized.filter((item) => !item.hasGenericOptions)
+        const preferredOnly = activeOnly.filter((item) => !item.hasPlaceholderOptions)
 
         // Determine desired difficulty
         const desiredDifficulty = level === 'superior' ? 'avanzado' : (difficultyParam || 'intermedio')
@@ -209,10 +258,12 @@ export async function GET(request: NextRequest) {
 
           const deduped: any[] = []
           const seenIds = new Set<string>()
+          const seenSignatures = new Set<string>()
           for (const item of ranked) {
-            if (seenIds.has(item._id)) continue
+            if (seenIds.has(item._id) || seenSignatures.has(item.signature)) continue
             deduped.push(item)
             seenIds.add(item._id)
+            seenSignatures.add(item.signature)
             if (deduped.length >= count) break
           }
 
@@ -224,6 +275,7 @@ export async function GET(request: NextRequest) {
           ? coreSubjects.filter((value) => requestedSubjects.includes(value))
           : coreSubjects
         const selected: any[] = []
+        const hasSelectedEquivalent = (candidate: any) => selected.some((item) => item._id === candidate._id || item.signature === candidate.signature)
 
         if (requestedSubjects.length > 0 || subject === 'todo') {
           const per = perSubjectCount ?? 5
@@ -235,7 +287,7 @@ export async function GET(request: NextRequest) {
             const coherent = pickCoherentQuestions(candidates, per)
             let addedForSubject = 0
             for (const q of coherent) {
-              if (!selected.find(x => x._id === q._id)) {
+              if (!hasSelectedEquivalent(q)) {
                 selected.push(q)
                 addedForSubject += 1
               }
@@ -253,7 +305,7 @@ export async function GET(request: NextRequest) {
             const shuffled = shuffle(candidates)
             for (const q of shuffled) {
               if (selected.length >= questionCount) break
-              if (!selected.find(x => x._id === q._id)) selected.push(q)
+              if (!hasSelectedEquivalent(q)) selected.push(q)
               if (selected.filter(x => x.subject === s).length >= per) break
             }
             if (selected.length >= questionCount) break
@@ -266,7 +318,7 @@ export async function GET(request: NextRequest) {
           const coherent = pickCoherentQuestions(candidates, questionCount)
           for (const q of coherent) {
             if (selected.length >= questionCount) break
-            if (!selected.find(x => x._id === q._id)) selected.push(q)
+            if (!hasSelectedEquivalent(q)) selected.push(q)
           }
         }
 
@@ -278,10 +330,13 @@ export async function GET(request: NextRequest) {
         if (selected.length < targetCount) {
           const allowedSubjects = requestedSubjects.length > 0 || subject === 'todo'
             ? new Set(activeSubjects)
+            : subject !== 'mixto'
+              ? new Set([subject])
             : null
-          const remaining = shuffle(activeOnly.filter(q => !selected.find(sq => sq._id === q._id) && (!allowedSubjects || allowedSubjects.has(q.subject))))
+          const remaining = shuffle(activeOnly.filter(q => !hasSelectedEquivalent(q) && (!allowedSubjects || allowedSubjects.has(q.subject))))
           for (const q of remaining) {
             if (selected.length >= targetCount) break
+            if (hasSelectedEquivalent(q)) continue
             selected.push(q)
           }
         }

@@ -9,6 +9,60 @@ const SUBJECT_LABELS: Record<PracticeExamQuestion["subject"], string> = {
   tic: "TIC",
 }
 
+const SUBJECT_ORDER: PracticeExamQuestion["subject"][] = [
+  "lengua",
+  "ingles",
+  "sociales",
+  "matematicas",
+  "naturales",
+  "tic",
+]
+
+type QuestionTopicGroup = {
+  topic: string
+  questions: Array<{
+    question: PracticeExamQuestion
+    originalIndex: number
+  }>
+}
+
+type QuestionSubjectGroup = {
+  subject: PracticeExamQuestion["subject"]
+  label: string
+  topics: QuestionTopicGroup[]
+}
+
+function normalizeTopicLabel(topic: string) {
+  const cleanTopic = (topic || "").trim()
+  return cleanTopic.length > 0 ? cleanTopic : "Tema general"
+}
+
+function buildQuestionGroups(pack: PracticeExamPack): QuestionSubjectGroup[] {
+  const indexedQuestions = pack.questions.map((question, originalIndex) => ({ question, originalIndex }))
+
+  return SUBJECT_ORDER
+    .map((subject) => {
+      const subjectQuestions = indexedQuestions.filter((entry) => entry.question.subject === subject)
+      if (subjectQuestions.length === 0) return null
+
+      const topicMap = new Map<string, QuestionTopicGroup>()
+      for (const entry of subjectQuestions) {
+        const topic = normalizeTopicLabel(entry.question.topic)
+        if (!topicMap.has(topic)) {
+          topicMap.set(topic, { topic, questions: [] })
+        }
+        topicMap.get(topic)?.questions.push(entry)
+      }
+
+      return {
+        subject,
+        label: SUBJECT_LABELS[subject],
+        topics: [...topicMap.values()],
+      }
+    })
+    .filter((group): group is QuestionSubjectGroup => group !== null)
+}
+
 function buildFileName(pack: PracticeExamPack) {
   const subject = pack.subjectLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")
   return `agoraedu-practica-${subject}-${pack.seed}.pdf`
@@ -21,6 +75,8 @@ export async function downloadPracticeExamPdf(pack: PracticeExamPack) {
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
   const contentWidth = pageWidth - margin * 2
+  const groupedQuestions = buildQuestionGroups(pack)
+  const subjectSummary = groupedQuestions.map((group) => group.label).join(", ")
   let y = margin
 
   const addPageHeader = () => {
@@ -52,6 +108,38 @@ export async function downloadPracticeExamPdf(pack: PracticeExamPack) {
     y += lines.length * lineHeight + extraGap
   }
 
+  const addSectionHeading = (title: string, subtitle?: string, startOnNewPage: boolean = false) => {
+    if (startOnNewPage) {
+      doc.addPage()
+      addPageHeader()
+    } else {
+      ensureSpace(subtitle ? 52 : 34)
+    }
+
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(16)
+    doc.text(title, margin, y)
+    y += 20
+
+    if (subtitle) {
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(10)
+      doc.setTextColor(90, 90, 90)
+      addWrappedText(subtitle, 10, 14, 10)
+      doc.setTextColor(0, 0, 0)
+    } else {
+      y += 8
+    }
+  }
+
+  const addTopicHeading = (topic: string) => {
+    ensureSpace(30)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(12)
+    doc.text(`Tema: ${topic}`, margin, y)
+    y += 18
+  }
+
   const estimateBlockHeight = (question: PracticeExamQuestion, includeAnswers: boolean) => {
     const promptLines = doc.splitTextToSize(`${question.prompt}`, contentWidth).length
     const optionLines = question.options.reduce((sum, option) => sum + doc.splitTextToSize(option.text, contentWidth - 18).length, 0)
@@ -66,13 +154,13 @@ export async function downloadPracticeExamPdf(pack: PracticeExamPack) {
     )
   }
 
-  const addQuestionBlock = (question: PracticeExamQuestion, index: number, includeAnswers: boolean) => {
+  const addQuestionBlock = (question: PracticeExamQuestion, questionNumber: number, includeAnswers: boolean) => {
     const blockHeight = estimateBlockHeight(question, includeAnswers)
     ensureSpace(blockHeight)
 
     doc.setFont("helvetica", "bold")
     doc.setFontSize(13)
-    addWrappedText(`${index + 1}. [${SUBJECT_LABELS[question.subject]}] ${question.prompt}`, 13, 18, 12)
+    addWrappedText(`${questionNumber}. ${question.prompt}`, 13, 18, 12)
 
     doc.setFont("helvetica", "normal")
     doc.setFontSize(11)
@@ -90,12 +178,6 @@ export async function downloadPracticeExamPdf(pack: PracticeExamPack) {
         y += 18
       }
     }
-
-    doc.setFontSize(10)
-    doc.setTextColor(90, 90, 90)
-    addWrappedText(`Tema: ${question.topic}`, 10, 14, 10, 14)
-    doc.setTextColor(0, 0, 0)
-
     if (includeAnswers) {
       doc.setFont("helvetica", "bold")
       doc.setFontSize(11)
@@ -112,7 +194,7 @@ export async function downloadPracticeExamPdf(pack: PracticeExamPack) {
   y += 36
 
   doc.setFont("helvetica", "normal")
-  addWrappedText("Asignaturas: Lengua y Literatura, Inglés, Ciencias Sociales, Matemáticas, Ciencias Naturales y TIC.", 11, 18, 16)
+  addWrappedText(`Asignaturas: ${subjectSummary || "Sin asignaturas disponibles"}.`, 11, 18, 16)
   addWrappedText(`Modalidad: ${pack.subjectLabel} | Dificultad: ${pack.difficulty} | Preguntas: ${pack.questions.length}`, 11, 16, 18)
   addWrappedText("Documento generado automáticamente para práctica de acceso. Incluye examen y solucionario al final.", 11, 16, 20)
   doc.setFont("helvetica", "bold")
@@ -145,8 +227,20 @@ export async function downloadPracticeExamPdf(pack: PracticeExamPack) {
   doc.setFont("helvetica", "normal")
   addWrappedText("Instrucciones: responde primero sin mirar el solucionario. Al final del PDF tienes las respuestas correctas y una breve explicacion para cada pregunta.", 11, 15, 10)
 
-  pack.questions.forEach((question, index) => {
-    addQuestionBlock(question, index, false)
+  let questionNumber = 1
+  groupedQuestions.forEach((subjectGroup, subjectIndex) => {
+    addSectionHeading(subjectGroup.label, `${subjectGroup.topics.length} tema(s) en este bloque.`, false)
+    subjectGroup.topics.forEach((topicGroup) => {
+      addTopicHeading(topicGroup.topic)
+      topicGroup.questions.forEach(({ question }) => {
+        addQuestionBlock(question, questionNumber, false)
+        questionNumber += 1
+      })
+    })
+    if (subjectIndex < groupedQuestions.length - 1) {
+      ensureSpace(12)
+      y += 6
+    }
   })
 
   doc.addPage()
@@ -158,8 +252,16 @@ export async function downloadPracticeExamPdf(pack: PracticeExamPack) {
   doc.setFont("helvetica", "normal")
   addWrappedText("Utiliza este bloque para corregirte y detectar patrones de error antes de generar otro examen.", 11, 15, 12)
 
-  pack.questions.forEach((question, index) => {
-    addQuestionBlock(question, index, true)
+  questionNumber = 1
+  groupedQuestions.forEach((subjectGroup, subjectIndex) => {
+    addSectionHeading(subjectGroup.label, `Soluciones organizadas por tema.`, subjectIndex > 0)
+    subjectGroup.topics.forEach((topicGroup) => {
+      addTopicHeading(topicGroup.topic)
+      topicGroup.questions.forEach(({ question }) => {
+        addQuestionBlock(question, questionNumber, true)
+        questionNumber += 1
+      })
+    })
   })
 
   doc.save(buildFileName(pack))

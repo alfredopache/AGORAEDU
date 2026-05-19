@@ -73,6 +73,54 @@ export async function GET(request: NextRequest) {
       return normalizedOptions.every((option) => placeholderPatterns.some((pattern) => pattern.test(option)))
     }
 
+    /**
+     * Returns true if the options are generic category labels that don't constitute
+     * a real multiple-choice question (e.g. all options are meta-descriptions like
+     * "Palabra con significado parecido" rather than specific answer choices).
+     */
+    function hasGenericCategoryOptions(options: string[]): boolean {
+      if (!Array.isArray(options) || options.length < 2) return false
+      const genericPatterns = [
+        /^palabra con significado/i,
+        /^palabra con.*contrario/i,
+        /^palabra no relacionada/i,
+        /^expresion que contradice/i,
+        /^present simple$/i,
+        /^past simple$/i,
+        /^present continuous$/i,
+        /^present perfect$/i,
+        /^sustantivo$/i,
+        /^adjetivo$/i,
+        /^verbo$/i,
+        /^adverbio$/i,
+        /^correct according to the text$/i,
+        /^partly true but incomplete$/i,
+        /^not mentioned in the text$/i,
+        /^opposite to the text$/i,
+        /^translation that keeps the meaning/i,
+        /^literal but incorrect translation$/i,
+        /^translation with wrong tense$/i,
+        /^unrelated sentence$/i,
+        /^correct translation$/i,
+        /^incorrect translation$/i,
+        /^tipo [a-z]/i,
+        /^opcion [a-z]/i,
+      ]
+      const normalOpts = options.map((o) => o.trim())
+      const genericCount = normalOpts.filter((o) => genericPatterns.some((p) => p.test(o))).length
+      return genericCount >= Math.ceil(normalOpts.length * 0.75)
+    }
+
+    /**
+     * Returns true when the question text is a task instruction (infinitive/imperative
+     * verb) rather than a proper exam question with specific context.
+     */
+    function isTaskDescriptionQuestion(question: string): boolean {
+      const q = normalizeText(question)
+      if (q.length > 150) return false
+      return /^(buscar|identificar|indicar|analizar|clasificar|completar|encontrar|explicar|calcular|resolver|determinar|reconocer|distinguir|localizar|señalar|define|describe|comenta|lee y|escribe|redacta|write|answer|find|complete|choose|select|read|translate)/i.test(q.trim())
+    }
+
     function hasMeaningfulSupportText(item: any) {
       const fields = [item.Explicación, item.RUBRICA_MODELO, item.RESPUESTA_MODELO_EXCELENTE, item.Explicacion, item.RESPUESTA_MODELO]
         .filter(Boolean)
@@ -195,19 +243,30 @@ export async function GET(request: NextRequest) {
         if (VALENCIA_GM_PDFS[y]) srcUrl = VALENCIA_GM_PDFS[y]
       }
 
+      const enrichedQuestion = enrichment?.question || item.Pregunta || item.question || item.enunciado || item.PREGUNTA || 'Sin enunciado'
+
+      // Quality fix: if the enrichment didn't replace the question and options are
+      // generic category labels (no real MCQ), either strip options (open question) or
+      // mark for removal.
+      const rawOptionsAreGeneric = !enrichment && isTaskDescriptionQuestion(enrichedQuestion) && (hasGenericCategoryOptions(optionsText) || optionsText.length === 0)
+      const finalOptions = rawOptionsAreGeneric
+        ? undefined // treat as open question — user types their answer against the text reference
+        : options
+
       return {
         _id,
-        question: enrichment?.question || item.Pregunta || item.question || item.enunciado || item.PREGUNTA || 'Sin enunciado',
+        question: enrichedQuestion,
         subject: mapSubject(item.Materia || item.materia || item.SUBJETO || item.SUBJECT),
         topic: enrichment?.topic || item.Tema || item.SUBTEMA || item.topic || '',
         difficulty: mapDifficulty(item.Dificultad || item.DIFICULTAD || item.Nivel || item.NIVEL || ''),
-        options,
+        options: finalOptions,
         explanation: [enrichment?.explanation, item.Explicación, item.RUBRICA_MODELO, item.RESPUESTA_MODELO_EXCELENTE, item.Explicacion].filter(Boolean).join('\n\n'),
         source: { name: srcName, year: srcYear || null, region: item.Region || item.REGION || item.Comunidad || item.COMUNIDAD || 'Nacional', url: srcUrl || null },
         original: item,
         isActive: isItemActive(item),
         hasPlaceholderOptions: placeholderOptions,
         hasMeaningfulSupport: hasMeaningfulSupportText(item),
+        hasGenericOptions: rawOptionsAreGeneric,
         textReference,
         reqImages,
       }
@@ -228,7 +287,13 @@ export async function GET(request: NextRequest) {
 
     // Filtrar por isActive
     const activeOnly = normalizedUnique.filter((q: any) => q.isActive)
-    const activePreferred = activeOnly.filter((q: any) => !q.hasPlaceholderOptions)
+    // Prefer questions without placeholder options AND without generic-only options
+    // Questions with generic options but a text reference are kept as open questions (hasGenericOptions=true)
+    // Questions with generic options AND no text reference are excluded from preferred pool
+    const activePreferred = activeOnly.filter((q: any) =>
+      !q.hasPlaceholderOptions &&
+      (!q.hasGenericOptions || q.textReference?.trim().length > 0)
+    )
 
     // Mapas para ámbitos compuestos (mantener compatibilidad con UI)
     const AMBITO_MAP: Record<string, string[]> = {

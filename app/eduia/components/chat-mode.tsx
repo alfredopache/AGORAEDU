@@ -23,11 +23,13 @@ interface OfficialDownloadGroup {
   key: string
   label: string
   note?: string
+  grade?: "gm" | "gs" | "basico"
   items: Array<{
     filename: string
     topic: string
     sizeKb: number
     downloadUrl: string
+    year?: number | null
   }>
 }
 
@@ -703,8 +705,20 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
             <div className="mt-4 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/60">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h5 className="text-sm font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">Descargas oficiales</h5>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Material filtrado para {selectedContext}.</p>
+                  <div className="flex items-center gap-2">
+                    <h5 className="text-sm font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">Descargas oficiales</h5>
+                    {selectedGoal === "fp" && selectedSubGoal && (
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide",
+                        selectedSubGoal === "gm"
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                          : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                      )}>
+                        {selectedSubGoal === "gm" ? "📗 Grado Medio" : "📘 Grado Superior"}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Material filtrado para {selectedContext} · ordenado por año.</p>
                 </div>
                 {isLoadingOfficialDownloads ? <Loader2 className="h-4 w-4 animate-spin text-slate-400" /> : null}
               </div>
@@ -719,17 +733,38 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
                 <div className="mt-3 grid gap-3 lg:grid-cols-2">
                   {officialDownloadGroups.map((group) => (
                     <div key={group.key} className="rounded-xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/40">
-                      <p className="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-100">{group.label}</p>
+                      <div className="flex items-center gap-2 mb-2">
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{group.label}</p>
+                        {group.grade && (
+                          <span className={cn(
+                            "px-1.5 py-0.5 rounded text-[9px] font-bold uppercase",
+                            group.grade === "gm"
+                              ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+                              : group.grade === "gs"
+                              ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
+                              : "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400"
+                          )}>
+                            {group.grade === "gm" ? "GM" : group.grade === "gs" ? "GS" : "Básico"}
+                          </span>
+                        )}
+                      </div>
                       {group.note ? <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">{group.note}</p> : null}
-                      <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
+                      <div className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
                         {group.items.map((item) => (
                           <a
                             key={`${group.key}-${item.downloadUrl}`}
                             href={item.downloadUrl}
-                            className="block rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs transition hover:border-purple-300 hover:bg-purple-50 dark:border-slate-700 dark:bg-slate-900/60 dark:hover:border-purple-500 dark:hover:bg-purple-900/20"
+                            className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs transition hover:border-purple-300 hover:bg-purple-50 dark:border-slate-700 dark:bg-slate-900/60 dark:hover:border-purple-500 dark:hover:bg-purple-900/20 group"
                           >
-                            <span className="block font-medium text-slate-800 dark:text-slate-100">{item.filename}</span>
-                            <span className="mt-0.5 block text-[11px] text-slate-500 dark:text-slate-400">{item.topic} · {item.sizeKb} KB</span>
+                            <div className="min-w-0 flex-1">
+                              <span className="block font-medium text-slate-800 dark:text-slate-100 truncate group-hover:text-purple-700 dark:group-hover:text-purple-300">{item.filename}</span>
+                              <span className="mt-0.5 block text-[10px] text-slate-400 dark:text-slate-500">{item.topic} · {item.sizeKb} KB</span>
+                            </div>
+                            {item.year && (
+                              <span className="ml-2 shrink-0 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                                {item.year}
+                              </span>
+                            )}
                           </a>
                         ))}
                       </div>

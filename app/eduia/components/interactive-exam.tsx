@@ -3,9 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion as motionBase, AnimatePresence } from "framer-motion"
 import { CheckCircle2, XCircle, Trophy, Clock, TrendingUp, Award, BookOpen, ChevronRight } from "lucide-react"
-import { GM_PDFS_BY_YEAR } from "@/lib/official-access-resources"
 import { PdfReferenceImage } from "./pdf-reference-image"
-import { OfficialAccessDownloadsPanel } from "./official-access-downloads-panel"
 
 const motion = motionBase as any
 import { cn, clampRedactionText, getWordCount, getLineCount, MAX_REDACTION_LINES, MAX_REDACTION_WORDS, formatExamSource } from "@/lib/utils"
@@ -60,6 +58,18 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
   const [openAnswer, setOpenAnswer] = useState<string>("")
   const [forceOpenMode, setForceOpenMode] = useState<boolean>(false)
 
+  const GM_PDFS: Record<string, string> = {
+    '2017': 'https://ceice.gva.es/documents/388109149/391038839/GM_2017.pdf',
+    '2018': 'https://ceice.gva.es/documents/388109149/391038839/GM_2018.pdf',
+    '2019': 'https://ceice.gva.es/documents/388109149/391038839/GM_2019.pdf',
+    '2020': 'https://ceice.gva.es/documents/388109149/391038839/GM_2020.pdf',
+    '2021': 'https://ceice.gva.es/documents/388109149/391038839/GM_2021.pdf',
+    '2022': 'https://ceice.gva.es/documents/388109149/391038839/GM_2022.pdf',
+    '2023': 'https://ceice.gva.es/documents/388109149/391038839/GM_2023.pdf',
+    '2024': 'https://ceice.gva.es/documents/388109149/391038839/GM_2024.pdf',
+    '2025': 'https://ceice.gva.es/documents/388109149/0/JUNTOS+GM+2025.pdf/eaff2543-5199-f592-6af1-aa689a78ea67',
+  }
+
   const resolveImage = (img: string):
     | { type: 'image'; url: string }
     | { type: 'pdf-proxy'; url: string; label: string }
@@ -70,7 +80,7 @@ export function InteractiveExam({ config, onComplete, onCancel }: InteractiveExa
     const yearMatch = img.match(/GM_(\d{4})/)
     if (img.includes('GM_')) {
       const year = yearMatch?.[1]
-      const sourceUrl = year && GM_PDFS_BY_YEAR[year] ? GM_PDFS_BY_YEAR[year] : null
+      const sourceUrl = year && GM_PDFS[year] ? GM_PDFS[year] : null
       const proxyUrl = sourceUrl ? `/api/pdf-proxy?url=${encodeURIComponent(sourceUrl)}` : `/api/pdf-proxy?url=${encodeURIComponent(`https://ceice.gva.es/documents/388109149/391038839/GM_${year}.pdf`)}`
       return {
         type: 'pdf-proxy',
@@ -860,16 +870,93 @@ export function ExamResultsView({ results, onNewExam, onBackToChat }: ExamResult
             })}
           </div>
         </motion.div>
+        {/* Descargas oficiales (AccesoIA - Valencia, Grado Medio) */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
+          className="mt-6 bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-md border border-slate-200 dark:border-slate-700"
         >
-          <OfficialAccessDownloadsPanel
-            title="Descargas — AccesoIA (Valencia · Grado Medio y Superior)"
-            description="Recursos oficiales y complementarios agrupados por año, con Grado Medio y Grado Superior separados para que todo aparezca en orden cronológico."
-            className="mt-6"
-          />
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">Descargas — AccesoIA (Valencia · Grado Medio)</h3>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">Enlaces oficiales y PDFs de pruebas de acceso. Si quieres que busque y añada todos los PDFs oficiales de Valencia, dímelo y los extraigo y agrego aquí.</p>
+          <ul className="space-y-2">
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2017.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2017 — Prueba de Acceso (parte común)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2017 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2018.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2018 — Prueba de Acceso (parte común)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2018 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2019.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2019 — Prueba de Acceso (parte común)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2019 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2020.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2020 — Prueba de Acceso (parte común)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2020 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2021.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2021 — Prueba de Acceso (parte común)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2021 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2022.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2022 — Prueba de Acceso (parte común)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2022 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2023.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2023 — Prueba de Acceso (parte común)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2023 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/391038839/GM_2024.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">GM 2024 — Prueba de Acceso (parte común)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2024 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/0/JUNTOS+GM+2025.pdf/eaff2543-5199-f592-6af1-aa689a78ea67" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">JUNTOS GM 2025 — Documentación / partes (GM 2025)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2025 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/392974777/OrientacionesGMGS_va.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Orientaciones Admisión GM/GS 2024-25 (valencià)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2024 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/392974777/OrientacionesGMGS_es.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Orientaciones Admisión GM/GS 2024-25 (español)</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2024 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://ceice.gva.es/documents/388109149/392974777/Prioridades_GM.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Criterios de Prioridad en la Admisión - CFGM</a>
+              <div className="text-xs text-slate-500">ceice.gva.es · 2024 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://portal.edu.gva.es/iesbenissa/wp-content/uploads/sites/309/2024/02/InformacioPAC_CFGM_24.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Informació PAC CFGM 2024 (IES Benissa)</a>
+              <div className="text-xs text-slate-500">portal.edu.gva.es · 2024 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://portal.edu.gva.es/ieslavalldigna/wp-content/uploads/sites/512/2024/02/Prova-acces-cicle-mitja.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Prova d'accés Cicle Mitjà 2024 (IES La Valldigna)</a>
+              <div className="text-xs text-slate-500">portal.edu.gva.es · 2024 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://portal.edu.gva.es/46020480/wp-content/uploads/sites/468/2025/03/Proves-dacces-FP-2025.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Proves d'accés FP 2025 — recopilación (Portal Educatiu)</a>
+              <div className="text-xs text-slate-500">portal.edu.gva.es · 2025 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://portal.edu.gva.es/iesalcasser/wp-content/uploads/sites/303/2025/02/PROVA-ACCES-GRAU-MITJA.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Prova Accés Grau Mitjà 2025 (IES Alcasser)</a>
+              <div className="text-xs text-slate-500">portal.edu.gva.es · 2025 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://portal.edu.gva.es/iesisabel-clarasimo/wp-content/uploads/sites/1636/2025/02/Proves-acces-CF2025.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Proves d'accés Cicles Formatius 2025 (IES Isabel Clara Simó)</a>
+              <div className="text-xs text-slate-500">portal.edu.gva.es · 2025 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://portal.edu.gva.es/iesabastos/wp-content/uploads/sites/617/2025/03/25PACFGM-v-Informacio-proves-dacces-de-grau-mitja.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Proves d'accés CFGM 2025 - Informació (IES Abastos)</a>
+              <div className="text-xs text-slate-500">portal.edu.gva.es · 2025 · PDF verificado</div>
+            </li>
+            <li>
+              <a href="https://portal.edu.gva.es/46020480/wp-content/uploads/sites/468/2024/02/Proves-dacces-cicles.pdf" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-300 font-medium">Proves d'accés a Cicles — recopilación 2024</a>
+              <div className="text-xs text-slate-500">portal.edu.gva.es · 2024 · enlace no verificado</div>
+            </li>
+          </ul>
         </motion.div>
       </div>
     </div>

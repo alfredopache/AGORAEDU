@@ -51,28 +51,28 @@ export function enrichDatasetQuestion(item: any, parsedOptions: string[] = [], v
   if (subject.includes("ingl") && (topic.includes("tiempos verbales") || topic.includes("formas verbales") || question.includes("correct tense") || question.includes("correct form") || question.includes("verb tense"))) {
     const variants = [
       {
-        question: "Choose the correct tense to complete the sentence: I usually ___ breakfast at seven o'clock before going to school.",
-        options: ["Present simple", "Past simple", "Present continuous", "Present perfect"],
+        question: "Choose the correct option to complete the sentence: I usually ___ breakfast at seven o'clock before going to school.",
+        options: ["eat", "ate", "am eating", "have eaten"],
         correctIndex: 0,
-        explanation: "Se usa present simple porque describe una rutina habitual marcada por 'usually'.",
+        explanation: "'Usually' indica una rutina habitual, por eso se usa present simple: 'I usually eat breakfast'.",
       },
       {
-        question: "Choose the correct tense to complete the sentence: Yesterday we ___ to the museum with our teacher.",
-        options: ["Present simple", "Past simple", "Present continuous", "Present perfect"],
+        question: "Choose the correct option to complete the sentence: Yesterday we ___ to the museum with our teacher.",
+        options: ["go", "went", "are going", "have gone"],
         correctIndex: 1,
-        explanation: "Se usa past simple porque 'yesterday' indica una acción terminada en el pasado.",
+        explanation: "'Yesterday' sitúa la acción en un momento pasado y terminado, así que la forma correcta es past simple: 'went'.",
       },
       {
-        question: "Choose the correct tense to complete the sentence: Look! The children ___ in the playground right now.",
-        options: ["Present simple", "Past simple", "Present continuous", "Present perfect"],
+        question: "Choose the correct option to complete the sentence: Look! The children ___ in the playground right now.",
+        options: ["play", "played", "are playing", "have played"],
         correctIndex: 2,
-        explanation: "Se usa present continuous porque la acción está ocurriendo en este momento y aparece 'right now'.",
+        explanation: "'Look!' y 'right now' indican que la acción está ocurriendo en este instante, así que corresponde present continuous: 'are playing'.",
       },
       {
-        question: "Choose the correct tense to complete the sentence: She ___ already finished her homework, so she can go out now.",
-        options: ["Present simple", "Past simple", "Present continuous", "Present perfect"],
+        question: "Choose the correct option to complete the sentence: She ___ her homework already, so she can go out now.",
+        options: ["finishes", "finished", "is finishing", "has finished"],
         correctIndex: 3,
-        explanation: "Se usa present perfect porque 'already' conecta una acción completada con su resultado en el presente.",
+        explanation: "'Already' conecta una acción ya completada con una consecuencia presente, por eso la forma correcta es present perfect: 'has finished'.",
       },
     ]
     return pickVariant(variants, seed, variantOffset)
@@ -337,6 +337,317 @@ export function enrichDatasetQuestion(item: any, parsedOptions: string[] = [], v
         options: ["Se redibujaron las fronteras de Europa, surgieron nuevas potencias (EE.UU. y URSS) y se creo la ONU", "Se unifico Europa politicamente", "Desaparecio el nacionalismo", "Todos los paises se hicieron democracias"],
         correctIndex: 0,
         explanation: "Tras la Segunda Guerra Mundial, Europa se reorganizo, surgieron dos superpotencias que iniciaron la Guerra Fria, y se fundo la Organizacion de las Naciones Unidas.",
+      },
+    ]
+    return pickVariant(variants, seed, variantOffset)
+  }
+
+  // ──────────────────────────────────────────────
+  // NUEVOS PATRONES AÑADIDOS
+  // ──────────────────────────────────────────────
+
+  // Lengua – comprensión lectora / respuestas sobre el texto
+  if (subject.includes("leng") && (topic.includes("comprension") || topic.includes("lectura") || question.includes("segun el texto") || question.includes("responde") || question.includes("elementos de la comunicacion") || question.includes("emisor") || question.includes("receptor"))) {
+    const variants = [
+      {
+        question: "¿Cual es el emisor en una noticia de periodico?",
+        options: ["El periodista o medio que publica la informacion", "El lector que lee la noticia", "El personaje del que habla la noticia", "La imprenta que publica el diario"],
+        correctIndex: 0,
+        explanation: "En un texto periodistico el emisor es quien crea y transmite el mensaje, es decir, el periodista o el medio de comunicacion.",
+      },
+      {
+        question: "¿Que elemento de la comunicacion es 'la lengua española' en una conversacion en español?",
+        options: ["El codigo", "El canal", "El receptor", "El contexto"],
+        correctIndex: 0,
+        explanation: "El codigo es el sistema de signos que comparten emisor y receptor. En este caso, la lengua española es el codigo empleado.",
+      },
+      {
+        question: "En un texto argumentativo, ¿cual es el objetivo principal del emisor?",
+        options: ["Convencer al receptor de una idea o punto de vista", "Narrar una historia de forma entretenida", "Describir un objeto o lugar con detalle", "Dar instrucciones para realizar una tarea"],
+        correctIndex: 0,
+        explanation: "Los textos argumentativos buscan persuadir al lector mediante razonamientos, datos y opiniones fundamentadas.",
+      },
+    ]
+    return pickVariant(variants, seed, variantOffset)
+  }
+
+  // Lengua – ortografía, puntuación, acentuación
+  if (subject.includes("leng") && (topic.includes("ortografi") || topic.includes("acentuacion") || topic.includes("puntuacion") || question.includes("tilde") || question.includes("acento") || question.includes("signo de puntuacion"))) {
+    const variants = [
+      {
+        question: "¿Cual de estas palabras lleva tilde segun las reglas de acentuacion?",
+        options: ["Cancion", "Mesa", "Casa", "Libro"],
+        correctIndex: 0,
+        explanation: "'Cancion' es una palabra aguda acabada en -n, por lo que lleva tilde segun las reglas generales de acentuacion.",
+      },
+      {
+        question: "¿Que signo de puntuacion se usa al inicio de una pregunta en español?",
+        options: ["¿", "¡", ";", ":"],
+        correctIndex: 0,
+        explanation: "En español las preguntas se abren con un signo de interrogacion invertido (¿) y se cierran con uno normal (?).",
+      },
+      {
+        question: "¿Cual de estas palabras es esdrujula y siempre lleva tilde?",
+        options: ["Matematicas", "Cancion", "Papel", "Reloj"],
+        correctIndex: 0,
+        explanation: "Las palabras esdrujulas (acento en la antepenultima silaba) siempre llevan tilde. 'Matematicas' es esdrujula: ma-te-MA-ti-cas.",
+      },
+    ]
+    return pickVariant(variants, seed, variantOffset)
+  }
+
+  // Lengua – literatura / figuras retoricas / autores
+  if (subject.includes("leng") && (topic.includes("literatura") || topic.includes("figura") || topic.includes("retorica") || topic.includes("metafora") || question.includes("figura literaria") || question.includes("recurso estilistico"))) {
+    const variants = [
+      {
+        question: "¿Cual es el recurso literario utilizado en la frase: 'Sus ojos son dos luceros'?",
+        options: ["Metafora", "Hiperbole", "Personificacion", "Aliteracion"],
+        correctIndex: 0,
+        explanation: "Es una metafora porque se establece una comparacion directa entre 'ojos' y 'luceros' sin usar nexos comparativos como 'como'.",
+      },
+      {
+        question: "¿Que figura retorica exagera una realidad para dar enfasis? Ejemplo: 'Te lo he dicho mil veces'.",
+        options: ["Hiperbole", "Metafora", "Personificacion", "Sinestesia"],
+        correctIndex: 0,
+        explanation: "La hiperbole consiste en exagerar una cualidad o cantidad para intensificar el mensaje. 'Mil veces' es una exageracion.",
+      },
+      {
+        question: "¿Cual de estos autores pertenece al Siglo de Oro de la literatura española?",
+        options: ["Miguel de Cervantes", "Federico Garcia Lorca", "Antonio Machado", "Ramon Maria del Valle-Inclan"],
+        correctIndex: 0,
+        explanation: "Miguel de Cervantes (1547-1616), autor de 'Don Quijote de la Mancha', es una de las figuras clave del Siglo de Oro español.",
+      },
+    ]
+    return pickVariant(variants, seed, variantOffset)
+  }
+
+  // Inglés – comprensión lectora (True/False, questions about a text)
+  if (subject.includes("ingl") && (topic.includes("comprension") || topic.includes("reading") || question.includes("according to the text") || question.includes("answer") || question.includes("true or false") || question.includes("comprension"))) {
+    const variants = [
+      {
+        question: "Which statement about a typical school timetable is most likely TRUE?",
+        options: ["Students usually have different subjects on different days", "All lessons last exactly 30 minutes", "Students never have breaks during the school day", "Schools always start at 6 a.m."],
+        correctIndex: 0,
+        explanation: "In most schools, the timetable varies each day to cover different subjects. This is a standard feature of secondary education.",
+      },
+      {
+        question: "In a reading text about healthy habits, which habit is usually recommended for better concentration?",
+        options: ["Getting enough sleep and eating a balanced diet", "Studying for 10 hours without breaks", "Drinking large amounts of coffee", "Skipping breakfast to save time"],
+        correctIndex: 0,
+        explanation: "Regular sleep and good nutrition are consistently linked to improved concentration and academic performance.",
+      },
+      {
+        question: "A news article says a city installed 500 new recycling bins. What is the main purpose of this action?",
+        options: ["To encourage citizens to recycle more waste", "To decorate the city streets", "To replace broken street lamps", "To attract more tourists"],
+        correctIndex: 0,
+        explanation: "Installing recycling bins is a direct environmental measure aimed at increasing waste recycling rates among the population.",
+      },
+    ]
+    return pickVariant(variants, seed, variantOffset)
+  }
+
+  // Inglés – vocabulario y definiciones
+  if (subject.includes("ingl") && (topic.includes("vocabulario") || topic.includes("vocabulary") || topic.includes("definicion") || question.includes("synonyms") || question.includes("meaning") || question.includes("definition"))) {
+    const variants = [
+      {
+        question: "Which word is closest in meaning to 'enormous'?",
+        options: ["Huge", "Tiny", "Average", "Narrow"],
+        correctIndex: 0,
+        explanation: "'Enormous' and 'huge' both mean very large in size. 'Tiny' is the opposite, and 'average' means normal size.",
+      },
+      {
+        question: "What does the word 'sustainable' mean in an environmental context?",
+        options: ["Able to be maintained over a long period without harming the environment", "Very expensive and difficult to produce", "Only available in tropical countries", "Already obsolete and no longer used"],
+        correctIndex: 0,
+        explanation: "'Sustainable' refers to practices or resources that can be maintained over time without depleting natural resources or causing ecological damage.",
+      },
+      {
+        question: "Choose the correct meaning of 'to commute' in the sentence: 'She commutes to work every day'.",
+        options: ["To travel regularly between home and work", "To work from home", "To take a holiday", "To arrive late"],
+        correctIndex: 0,
+        explanation: "To commute means to make a regular journey, usually between home and workplace. It typically refers to daily travel by public transport or car.",
+      },
+    ]
+    return pickVariant(variants, seed, variantOffset)
+  }
+
+  // Matemáticas – porcentajes y proporcionalidad
+  if (subject.includes("matem") && (topic.includes("porcentaje") || topic.includes("proporcion") || question.includes("porcentaje") || question.includes("descuento") || question.includes("tanto por ciento"))) {
+    const variants = [
+      {
+        question: "Un articulo cuesta 80 € y tiene un descuento del 25%. ¿Cual es el precio final?",
+        options: ["60 €", "55 €", "65 €", "70 €"],
+        correctIndex: 0,
+        explanation: "El 25% de 80 € es 20 €. Restando: 80 - 20 = 60 €. El precio final con descuento es 60 €.",
+      },
+      {
+        question: "En una clase de 30 alumnos, el 40% saca nota superior a 7. ¿Cuantos alumnos son?",
+        options: ["12", "10", "15", "18"],
+        correctIndex: 0,
+        explanation: "El 40% de 30 = 0.40 × 30 = 12 alumnos. La clave es convertir el porcentaje en decimal y multiplicar.",
+      },
+      {
+        question: "Un producto pasa de costar 50 € a 60 €. ¿Cual es el porcentaje de aumento?",
+        options: ["20%", "10%", "25%", "15%"],
+        correctIndex: 0,
+        explanation: "Aumento = 60 - 50 = 10. Porcentaje = (10 / 50) × 100 = 20%. El precio ha subido un 20%.",
+      },
+    ]
+    return pickVariant(variants, seed, variantOffset)
+  }
+
+  // Matemáticas – estadística básica (media, moda, mediana)
+  if (subject.includes("matem") && (topic.includes("estadistic") || topic.includes("media") || topic.includes("mediana") || topic.includes("moda") || question.includes("media aritmetica") || question.includes("valor medio"))) {
+    const variants = [
+      {
+        question: "Las notas de un alumno son: 6, 7, 8, 5, 9. ¿Cual es la media aritmetica?",
+        options: ["7", "6", "8", "5"],
+        correctIndex: 0,
+        explanation: "Suma: 6+7+8+5+9 = 35. Media = 35 ÷ 5 = 7. La media aritmetica es la suma de todos los valores dividida entre el numero de valores.",
+      },
+      {
+        question: "En la serie de datos 3, 5, 5, 7, 9, ¿cual es la moda?",
+        options: ["5", "3", "7", "9"],
+        correctIndex: 0,
+        explanation: "La moda es el valor que aparece con mayor frecuencia. El 5 aparece dos veces, mientras que los demas solo aparecen una vez.",
+      },
+      {
+        question: "En la serie ordenada 2, 4, 6, 8, 10, ¿cual es la mediana?",
+        options: ["6", "4", "8", "5"],
+        correctIndex: 0,
+        explanation: "La mediana es el valor central de una serie ordenada. Con 5 valores, el central es el tercero: 6.",
+      },
+    ]
+    return pickVariant(variants, seed, variantOffset)
+  }
+
+  // Ciencias Naturales – biología / ecología / cuerpo humano
+  if ((subject.includes("cienc") || subject.includes("natur") || subject.includes("biolog")) && (topic.includes("ecolog") || topic.includes("seres vivos") || topic.includes("ecosistema") || topic.includes("celula") || topic.includes("sistema") || question.includes("organismo") || question.includes("celula") || question.includes("ecosistema"))) {
+    const variants = [
+      {
+        question: "¿Cual es la funcion principal de la fotosintesis en las plantas?",
+        options: ["Transformar energia luminica en energia quimica (glucosa) usando CO2 y agua", "Absorber agua del suelo mediante las raices", "Reproducirse a traves de semillas", "Eliminar oxigeno del ambiente"],
+        correctIndex: 0,
+        explanation: "La fotosintesis es el proceso por el que las plantas producen glucosa a partir de la luz solar, el CO2 del aire y el agua del suelo, liberando oxigeno como subproducto.",
+      },
+      {
+        question: "¿Que organulo celular es responsable de producir energia en las celulas eucariotas?",
+        options: ["Mitocondria", "Vacuola", "Ribosoma", "Nucleo"],
+        correctIndex: 0,
+        explanation: "La mitocondria realiza la respiracion celular aerobia, convirtiendo glucosa y oxigeno en ATP (energia) que la celula puede usar.",
+      },
+      {
+        question: "¿Como se denomina la relacion en la que un organismo se beneficia mientras el otro no resulta ni beneficiado ni perjudicado?",
+        options: ["Comensalismo", "Mutualismo", "Parasitismo", "Depredacion"],
+        correctIndex: 0,
+        explanation: "En el comensalismo uno de los organismos se beneficia y el otro permanece indiferente. Ejemplo: el rémora que viaja en tiburones.",
+      },
+    ]
+    return pickVariant(variants, seed, variantOffset)
+  }
+
+  // TIC – seguridad informática y privacidad digital
+  if (subject.includes("tic") && (topic.includes("seguridad") || topic.includes("privacidad") || topic.includes("ciberseguridad") || question.includes("virus") || question.includes("contrasena") || question.includes("phishing") || question.includes("proteccion de datos"))) {
+    const variants = [
+      {
+        question: "¿Cual es la mejor practica para proteger una cuenta de usuario en internet?",
+        options: ["Usar una contraseña unica y larga con letras, numeros y simbolos", "Usar el mismo nombre de usuario como contraseña", "Compartir la contraseña con un amigo de confianza", "Escribir la contraseña en un papel cerca del ordenador"],
+        correctIndex: 0,
+        explanation: "Las contraseñas seguras combinan letras mayusculas y minusculas, numeros y simbolos. Deben ser unicas para cada servicio y no compartirse.",
+      },
+      {
+        question: "¿Que es el 'phishing'?",
+        options: ["Una tecnica de engaño que intenta robar datos personales o contraseñas haciendose pasar por una entidad de confianza", "Un programa que mejora la velocidad del ordenador", "Un tipo de copia de seguridad de archivos", "Una red wifi publica segura"],
+        correctIndex: 0,
+        explanation: "El phishing consiste en correos, mensajes o paginas web falsas que imitan a empresas o entidades reales para conseguir que el usuario revele sus datos.",
+      },
+      {
+        question: "¿Que debes hacer si recibes un correo sospechoso que te pide tus datos bancarios?",
+        options: ["No abrir los enlaces, no responder y denunciarlo como spam o phishing", "Responder con tus datos para comprobar si es real", "Reenviarlo a tus contactos como aviso", "Hacer clic en 'darse de baja' para que no te lleguen mas correos"],
+        correctIndex: 0,
+        explanation: "Nunca se deben proporcionar datos bancarios ni personales a traves de correos no solicitados. Lo correcto es ignorarlos y reportarlos.",
+      },
+    ]
+    return pickVariant(variants, seed, variantOffset)
+  }
+
+  // TIC – hojas de calculo y bases de datos
+  if (subject.includes("tic") && (topic.includes("hoja de calculo") || topic.includes("spreadsheet") || topic.includes("base de datos") || question.includes("formula") || question.includes("celda") || question.includes("excel") || question.includes("calc"))) {
+    const variants = [
+      {
+        question: "¿Que formula en Excel suma los valores de las celdas A1, A2 y A3?",
+        options: ["=SUMA(A1:A3)", "=TOTAL(A1,A3)", "=CONTAR(A1:A3)", "=PROMEDIO(A1;A3)"],
+        correctIndex: 0,
+        explanation: "=SUMA(A1:A3) suma todos los valores en el rango de A1 a A3. Los dos puntos (:) indican un rango continuo de celdas.",
+      },
+      {
+        question: "En una base de datos relacional, ¿como se llama el campo que identifica de forma unica cada registro?",
+        options: ["Clave primaria", "Campo nulo", "Indice externo", "Dato duplicado"],
+        correctIndex: 0,
+        explanation: "La clave primaria es el campo (o conjunto de campos) que identifica de forma unica e irrepetible cada registro de una tabla.",
+      },
+    ]
+    return pickVariant(variants, seed, variantOffset)
+  }
+
+  // Matemáticas – funciones y gráficas
+  if (subject.includes("matem") && (topic.includes("funcion") || topic.includes("grafica") || question.includes("funcion lineal") || question.includes("pendiente") || question.includes("coordenadas"))) {
+    const variants = [
+      {
+        question: "¿Que forma tiene la grafica de la funcion y = 2x + 3?",
+        options: ["Una recta con pendiente positiva que corta el eje Y en 3", "Una parabola que abre hacia arriba", "Una curva con minimo en el origen", "Una recta horizontal"],
+        correctIndex: 0,
+        explanation: "y = 2x + 3 es una funcion lineal. La pendiente es 2 (positiva, la recta sube) y la ordenada en el origen es 3 (corta el eje Y en y=3).",
+      },
+      {
+        question: "En la funcion y = mx + b, ¿que representa el valor 'm'?",
+        options: ["La pendiente (inclinacion) de la recta", "El punto donde la recta corta el eje X", "El valor maximo de la funcion", "El numero de variables de la ecuacion"],
+        correctIndex: 0,
+        explanation: "En la ecuacion de la recta y = mx + b, m es la pendiente que indica cuanto sube o baja y por cada unidad que avanza x. Un m positivo sube; negativo, baja.",
+      },
+    ]
+    return pickVariant(variants, seed, variantOffset)
+  }
+
+  // Ciencias – física / química básica
+  if ((subject.includes("cienc") || subject.includes("natur") || subject.includes("fisic") || subject.includes("quim")) && (topic.includes("materia") || topic.includes("estados") || topic.includes("mezcla") || topic.includes("elemento") || topic.includes("reaccion") || question.includes("estados de la materia") || question.includes("mezcla") || question.includes("elemento quimico"))) {
+    const variants = [
+      {
+        question: "¿En que estado de la materia las moleculas tienen forma y volumen propios y definidos?",
+        options: ["Solido", "Liquido", "Gas", "Plasma"],
+        correctIndex: 0,
+        explanation: "En estado solido las moleculas estan muy juntas y ordenadas, lo que da al solido forma y volumen propios. En el liquido hay volumen pero no forma fija; en el gas no hay ni uno ni otro.",
+      },
+      {
+        question: "¿Como se llama la mezcla que parece uniforme y no se pueden distinguir sus componentes a simple vista?",
+        options: ["Mezcla homogenea", "Mezcla heterogenea", "Compuesto puro", "Elemento simple"],
+        correctIndex: 0,
+        explanation: "En una mezcla homogenea (o disolucion) los componentes estan distribuidos de manera uniforme. El agua con sal es un ejemplo clasico.",
+      },
+      {
+        question: "¿Cual es el simbolo quimico del oxigeno?",
+        options: ["O", "Ox", "Og", "Or"],
+        correctIndex: 0,
+        explanation: "El oxigeno tiene el simbolo quimico O (del latin Oxygenium). Es el elemento con numero atomico 8 y es fundamental para la respiracion.",
+      },
+    ]
+    return pickVariant(variants, seed, variantOffset)
+  }
+
+  // Geografía e Historia – economia, politica, geografía
+  if ((subject.includes("sociales") || subject.includes("geogr") || subject.includes("hist")) && (topic.includes("econom") || topic.includes("globalizacion") || topic.includes("pib") || question.includes("economia") || question.includes("pib") || question.includes("inflacion"))) {
+    const variants = [
+      {
+        question: "¿Que mide el Producto Interior Bruto (PIB) de un pais?",
+        options: ["El valor total de bienes y servicios producidos en un pais durante un periodo de tiempo", "El numero total de trabajadores de un pais", "La cantidad de exportaciones anuales", "El nivel de deuda publica acumulada"],
+        correctIndex: 0,
+        explanation: "El PIB es el indicador economico principal para medir la riqueza producida en un pais en un año. Incluye tanto bienes como servicios.",
+      },
+      {
+        question: "¿Que es la inflacion?",
+        options: ["El aumento generalizado y sostenido de los precios de bienes y servicios", "La reduccion del desempleo en un pais", "El aumento de las exportaciones nacionales", "La disminucion del valor de la moneda extranjera"],
+        correctIndex: 0,
+        explanation: "La inflacion refleja la perdida de poder adquisitivo: si los precios suben, con el mismo dinero se puede comprar menos. Se mide mediante el IPC.",
       },
     ]
     return pickVariant(variants, seed, variantOffset)
