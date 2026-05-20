@@ -3,13 +3,83 @@ import { notFound } from "next/navigation"
 import { Clock, ArrowLeft } from "lucide-react"
 import { getBlogPost } from "@/content/blog"
 import { urlFor } from "@/lib/sanity"
-import { PortableText } from "@portabletext/react"
+import { PortableText, PortableTextComponents } from "@portabletext/react"
 import Image from "next/image"
 import { ShareButton } from "@/components/share-button"
 import { ScrollCue } from "@/components/ui/scroll-cue"
 import type { Metadata } from "next"
 
 export const dynamic = 'force-dynamic'
+
+// 🎛️ CONFIGURACIÓN DE COMPONENTES DE PORTABLE TEXT: Esto procesa y arregla todo lo de Sanity
+const portableTextComponents: PortableTextComponents = {
+  types: {
+    // Corrige el renderizado de imágenes embebidas dentro de bloques de texto
+    image: ({ value }) => {
+      if (!value?.asset) return null;
+      return (
+        <div className="relative my-8 w-full overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-slate-950 p-2">
+          <img
+            src={urlFor(value).width(1200).auto('format').url()}
+            alt={value.alt || "Imagen del artículo"}
+            className="w-full h-auto object-contain rounded-xl max-h-[500px] mx-auto"
+            loading="lazy"
+          />
+          {value.caption && (
+            <p className="mt-2 text-center text-xs text-slate-400 dark:text-slate-500 italic font-medium">
+              {value.caption}
+            </p>
+          )}
+        </div>
+      );
+    },
+  },
+  block: {
+    // Corrige encabezados para que su tamaño sea jerárquico y contenga márgenes correctos
+    h1: ({ children }) => <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white mt-10 mb-4 tracking-tight">{children}</h1>,
+    h2: ({ children }) => <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mt-8 mb-4 tracking-tight">{children}</h2>,
+    h3: ({ children }) => <h3 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white mt-6 mb-3">{children}</h3>,
+    h4: ({ children }) => <h4 className="text-lg md:text-xl font-semibold text-slate-900 dark:text-white mt-4 mb-2">{children}</h4>,
+    
+    // ✅ CORRECCIÓN DE SALTOS DE LÍNEA: Preserva los retornos de carro de Sanity usando 'whitespace-pre-line'
+    normal: ({ children }) => (
+      <p className="mb-6 leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-line">
+        {children}
+      </p>
+    ),
+    blockquote: ({ children }) => (
+      <blockquote className="border-l-4 border-blue-500 bg-slate-50 dark:bg-slate-900/50 px-6 py-4 rounded-r-xl italic my-6 text-slate-800 dark:text-slate-200">
+        {children}
+      </blockquote>
+    ),
+  },
+  list: {
+    // Corrige viñetas y orden numérico
+    bullet: ({ children }) => <ul className="list-disc pl-6 mb-6 space-y-2 text-slate-700 dark:text-slate-300">{children}</ul>,
+    number: ({ children }) => <ol className="list-decimal pl-6 mb-6 space-y-2 text-slate-700 dark:text-slate-300">{children}</ol>,
+  },
+  listItem: {
+    bullet: ({ children }) => <li>{children}</li>,
+    number: ({ children }) => <li>{children}</li>,
+  },
+  marks: {
+    // Corrige links que agreguen los creadores desde Sanity
+    link: ({ children, value }) => {
+      const rel = !value.href.startsWith('/') ? 'noreferrer noopener' : undefined;
+      const target = !value.href.startsWith('/') ? '_blank' : undefined;
+      return (
+        <a 
+          href={value.href} 
+          target={target} 
+          rel={rel} 
+          className="text-blue-600 dark:text-cyan-400 font-semibold underline underline-offset-4 hover:text-blue-700 dark:hover:text-cyan-300 transition-colors"
+        >
+          {children}
+        </a>
+      );
+    },
+  },
+}
 
 // --- SEO DINÁMICO ---
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -25,19 +95,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     openGraph: {
       title: entry.title,
       description: entry.excerpt,
-      // Optimizamos también la imagen de la tarjeta social
       images: entry.image ? [urlFor(entry.image).width(1200).height(630).url()] : [],
     },
   }
 }
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
-  // 1. Desenvolver la promesa de params (Requerido en Next.js 15)
   const resolvedParams = await params;
-  
-  // 2. Decodificar para evitar el error 404 con acentos
   const decodedSlug = decodeURIComponent(resolvedParams.slug);
-  
   const entry = await getBlogPost(decodedSlug);
 
   if (!entry) notFound();
@@ -62,16 +127,14 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           {entry.image ? (
             <>
               <Image 
-                // Optimizamos la URL de Sanity: gran tamaño, alta calidad y formato automático
                 src={urlFor(entry.image).width(2000).quality(90).auto('format').url()} 
                 alt={entry.title}
                 fill
-                priority // Carga crítica de LCP
+                priority 
                 className="object-cover"
                 sizes="100vw"
-                quality={95} // Calidad de compresión de Next.js
+                quality={95}
               />
-              {/* CAPA DE GRANO: Mejora la percepción de nitidez y evita el 'banding' en degradados */}
               <div 
                 className="absolute inset-0 z-10 opacity-[0.2] mix-blend-overlay pointer-events-none" 
                 style={{ backgroundImage: `url('https://grainy-gradients.vercel.app/noise.svg')` }}
@@ -82,7 +145,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           )}
         </div>
         
-        {/* Gradiente de superposición para lectura de Navbar y Títulos */}
+        {/* Gradiente de superposición */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-50 dark:from-slate-950 via-slate-900/20 to-black/40 z-20" />
         
         {/* Indicador de scroll para móviles */}
@@ -129,10 +192,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       {/* Cuerpo del Artículo */}
       <div className="relative z-30 mx-auto max-w-5xl px-6 md:-mt-10">
         <div className="rounded-[2.5rem] bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 p-8 md:p-16 backdrop-blur-2xl shadow-2xl transition-all duration-500">
-          <div className="prose dark:prose-invert prose-blue max-w-none">
-            <div className="text-lg md:text-xl leading-relaxed text-slate-700 dark:text-slate-200 font-sans selection:bg-blue-500/30">
-              <PortableText value={entry.content} />
-            </div>
+          
+          {/* ✅ CORREGIDO: Eliminamos clases colisionantes de Tailwind 'prose' y aplicamos los componentes custom */}
+          <div className="max-w-none text-base md:text-lg leading-relaxed font-sans selection:bg-blue-500/30">
+            <PortableText value={entry.content} components={portableTextComponents} />
           </div>
           
           {/* Footer del autor */}

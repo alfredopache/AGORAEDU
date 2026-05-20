@@ -35,11 +35,20 @@ export default {
       initialValue: 'blue',
       options: {
         list: [
+          /* Colores originales */
           { title: 'Azul', value: 'blue' },
           { title: 'Índigo', value: 'indigo' },
           { title: 'Cian', value: 'cyan' },
-          { title: 'Violeta', value: 'purple' },
+          { title: 'Púrpura', value: 'purple' },
           { title: 'Esmeralda', value: 'emerald' },
+          /* 🎨 Nuevos colores añadidos */
+          { title: 'Violeta', value: 'violet' },
+          { title: 'Fucsia', value: 'fuchsia' },
+          { title: 'Rosa', value: 'pink' },
+          { title: 'Rosa Intenso (Rose)', value: 'rose' },
+          { title: 'Ámbar', value: 'amber' },
+          { title: 'Naranja', value: 'orange' },
+          { title: 'Rojo', value: 'red' },
         ],
       },
     },
@@ -52,11 +61,12 @@ export default {
         {
           type: 'reference',
           to: [
-            { type: 'project' },   // Correcto
-            { type: 'post' },      // CORREGIDO: Antes 'blog'
-            { type: 'podcast' },   // CORREGIDO: Antes 'multimedia'
-            { type: 'resource' },  // CORREGIDO: Antes 'resource' (plural según tu index)
-            { type: 'recursoImagen' } // Nuevo tipo para imágenes educativas
+            { type: 'project' },       // Proyectos
+            { type: 'post' },          // Artículos / Blog
+            { type: 'podcast' },       // Videos / YouTube
+            { type: 'recursoImagen' }, // Imágenes educativas directas
+            { type: 'recursoArchivo' } // 🗂️ Tu nuevo esquema de archivos/descargables
+            // Eliminado el antiguo 'resource' para evitar inconsistencias de datos 
           ],
         },
       ],

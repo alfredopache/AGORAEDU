@@ -2,7 +2,7 @@ import * as React from "react"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { getCarpetaBySlug } from "@/content/carpetas"
-import { ArrowLeft, BookOpen, Rocket, FileText, Video, ArrowRight, Hash, Mic, Home, Image as ImageIcon } from "lucide-react"
+import { ArrowLeft, BookOpen, Rocket, FileText, Video, ArrowRight, Hash, Mic, Home, FolderOpen, Image as ImageIcon } from "lucide-react"
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -12,23 +12,38 @@ const getItemMeta = (type: string) => {
   switch (type) {
     case "blog":
     case "post":
-      return { label: "Articulo", icon: <BookOpen className="w-5 h-5 text-amber-500" />, bg: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20", path: "blog" }
+      return { icon: <BookOpen className="w-5 h-5 text-amber-500 dark:text-amber-400" />, path: "blog" }
     
     case "project":
-      return { label: "Despliegue", icon: <Rocket className="w-5 h-5 text-blue-500" />, bg: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20", path: "proyectos" }
+      return { icon: <Rocket className="w-5 h-5 text-blue-500 dark:text-blue-400" />, path: "proyectos" }
     
-    case "resource":
-      return { label: "Documento", icon: <FileText className="w-5 h-5 text-emerald-500" />, bg: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20", path: "recursos" }
+    case "recursoArchivo":
+      return { icon: <FileText className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />, path: "archivos" }
     
     case "podcast":
-      return { label: "YouTube", icon: <Mic className="w-5 h-5 text-red-500" />, bg: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20", path: "youtube" }
+      return { icon: <Mic className="w-5 h-5 text-red-500 dark:text-red-400" />, path: "youtube" }
     
     case "recursoImagen":
-      return { label: "Imagen", icon: <ImageIcon className="w-5 h-5 text-cyan-500" />, bg: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20", path: "imagenes" }
+      return { icon: <ImageIcon className="w-5 h-5 text-cyan-500 dark:text-cyan-400" />, path: "imagenes" }
 
     default:
-      return { label: "Blob", icon: <Mic className="w-5 h-5 text-slate-500" />, bg: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20", path: "dashboard" }
+      return { icon: <FileText className="w-5 h-5 text-slate-500" />, path: "dashboard" }
   }
+}
+
+const colorGlows: Record<string, string> = {
+  blue: "from-blue-500/15 via-transparent",
+  indigo: "from-indigo-500/15 via-transparent",
+  cyan: "from-cyan-500/15 via-transparent",
+  purple: "from-purple-500/15 via-transparent",
+  emerald: "from-emerald-500/15 via-transparent",
+  violet: "from-violet-500/15 via-transparent",
+  fuchsia: "from-fuchsia-500/15 via-transparent",
+  pink: "from-pink-500/15 via-transparent",
+  rose: "from-rose-500/15 via-transparent",
+  amber: "from-amber-500/15 via-transparent",
+  orange: "from-orange-500/15 via-transparent",
+  red: "from-red-500/15 via-transparent",
 }
 
 export default async function FolderDetailPage({ params }: PageProps) {
@@ -38,98 +53,125 @@ export default async function FolderDetailPage({ params }: PageProps) {
   if (!carpeta) notFound()
 
   const items = carpeta.items || []
+  const glowClass = colorGlows[carpeta.color || "blue"]
 
   return (
-    <main className="relative min-h-screen bg-white dark:bg-slate-950 pt-16 pb-24 transition-colors duration-500">
-      <div className="absolute top-0 bottom-0 left-[max(2rem,calc((100vw-56rem)/2))] w-px bg-slate-100 dark:bg-white/5 hidden xl:block" />
+    <main className="relative min-h-screen bg-slate-100/60 dark:bg-slate-950 pt-4 pb-32 transition-colors duration-500 overflow-hidden">
+      
+
 
       <div className="relative z-10 mx-auto max-w-4xl px-6">
+        
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm font-medium text-slate-400 dark:text-slate-500 mb-10 overflow-x-auto whitespace-nowrap py-1">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-slate-400 dark:text-slate-500 uppercase">
+            <Link 
+              href="/carpetas" 
+              className="flex items-center justify-center p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 shadow-xs hover:text-slate-900 dark:hover:text-white transition-all duration-200"
+              title="Volver a carpetas"
+            >
+              <Home className="w-3.5 h-3.5" />
+            </Link>
+            <span className="text-slate-300 dark:text-white/10">/</span>
+            <span className="font-mono bg-white/80 dark:bg-white/5 text-slate-700 dark:text-slate-300 px-3 py-1 rounded-lg border border-slate-200 dark:border-white/10">
+              {carpeta.slug}
+            </span>
+          </div>
+          
           <Link 
             href="/carpetas" 
-            className="flex items-center justify-center p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white transition-all duration-200"
-            title="Volver a carpetas"
+            className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
           >
-            <Home className="w-4 h-4" />
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Volver al listado
           </Link>
-          <span className="text-slate-300 dark:text-white/10">/</span>
-          <span className="text-slate-900 dark:text-slate-200 font-mono bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-md">
-            {carpeta.slug}
-          </span>
         </div>
 
-        {/* Cabecera */}
-        <div className="relative border border-slate-200/60 dark:border-white/5 bg-slate-50/30 dark:bg-slate-900/10 p-8 rounded-3xl mb-12 backdrop-blur-xs">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white font-serif tracking-tight">
+        {/* Cabecera Premium Glassmorphism */}
+        <div className="relative border border-slate-200 dark:border-white/10 bg-gradient-to-b from-white/90 to-white/40 dark:from-slate-900/80 dark:to-slate-900/40 p-8 md:p-10 rounded-3xl mb-12 shadow-sm backdrop-blur-md">
+          
+          <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
             {carpeta.title}
           </h1>
-          {carpeta.description && (
-            <p className="mt-4 text-base md:text-lg text-slate-500 dark:text-slate-400 leading-relaxed">
+          {carpeta.description ? (
+            <p className="mt-4 text-base md:text-lg text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
               {carpeta.description}
+            </p>
+          ) : (
+            <p className="mt-3 text-sm italic text-slate-400 dark:text-slate-500">
+              Sin descripción adicional para esta carpeta.
             </p>
           )}
         </div>
 
-        {/* Explorador de Archivos */}
-        <div className="border border-slate-200/80 dark:border-white/5 rounded-3xl overflow-hidden bg-white/50 dark:bg-slate-900/10 shadow-sm">
-          <div className="flex items-center justify-between px-6 py-4.5 bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200/80 dark:border-white/5 text-xs font-black uppercase tracking-widest text-slate-400">
-            <div className="flex items-center gap-2.5">
-              <Hash className="w-3.5 h-3.5" />
-              <span>ITEMS VINCULADOS ({items.length})</span>
+        {/* Contenedor Principal del Explorador con Fondo Mejorado */}
+        <div className="border border-slate-200 dark:border-white/10 rounded-3xl overflow-hidden bg-gradient-to-br from-white/90 to-slate-50/90 dark:from-slate-900/60 dark:to-slate-950/40 shadow-xl shadow-slate-200/50 dark:shadow-none backdrop-blur-xl">
+          
+          {/* Barra de título del explorador */}
+          <div className="flex items-center justify-between px-6 py-4 bg-white/40 dark:bg-slate-900/80 border-b border-slate-200 dark:border-white/10 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <div className="flex items-center gap-2">
+              <Hash className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" />
+              <span>Contenido Vinculado ({items.length})</span>
             </div>
-            <span className="hidden sm:block">ACCESO</span>
+            <span className="hidden sm:block font-mono text-[10px]">Origen / Plataforma</span>
           </div>
 
           {items.length === 0 ? (
-            <div className="p-12 text-center text-sm text-slate-400 dark:text-slate-500 italic">
-              Esta carpeta está vacía.
+            <div className="flex flex-col items-center justify-center p-20 text-center">
+              <div className="h-16 w-16 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-400 dark:text-slate-600 mb-4 shadow-xs">
+                <FolderOpen className="w-7 h-7" />
+              </div>
+              <h3 className="text-base font-bold text-slate-700 dark:text-slate-300">Esta carpeta está vacía</h3>
+              <p className="text-sm text-slate-400 dark:text-slate-500 max-w-xs mt-1">
+                El docente aún no ha anexado archivos o lecturas a este espacio.
+              </p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-white/5">
+            <div className="divide-y divide-slate-150 dark:divide-white/5">
               {items.map((item) => {
                 if (!item || !item._type) return null
                 
                 const meta = getItemMeta(item._type)
                 const isPodcast = item._type === "podcast"
                 const isRecursoImagen = item._type === "recursoImagen"
-                const isResource = item._type === "resource" // 👈 CORREGIDO: Eliminada la comparación errónea con "resources"
+                const isRecursoArchivo = item._type === "recursoArchivo"
 
-                // --- CASO EXCLUSIVO: DETECTAR Y PINTAR LA IMAGEN DIRECTAMENTE ---
+                // --- VISTA MAQUETADA PARA IMÁGENES ---
                 if (isRecursoImagen) {
                   return (
                     <div 
                       key={item._id} 
-                      className="p-6 bg-slate-50/50 dark:bg-slate-900/20 flex flex-col gap-4"
+                      className="p-6 md:p-8 bg-white/40 dark:bg-slate-900/10 flex flex-col gap-4 hover:bg-white/80 dark:hover:bg-slate-900/30 transition-colors duration-300"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-white dark:bg-slate-950 border border-slate-200/60 dark:border-white/10 flex items-center justify-center shadow-xs shrink-0">
+                      <div className="flex items-center gap-3.5">
+                        <div className="h-10 w-10 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-xs shrink-0">
                           {meta.icon}
                         </div>
                         <div>
-                          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                          <h4 className="text-base font-bold text-slate-800 dark:text-slate-200 leading-tight">
                             {item.title}
                           </h4>
                           {item.description && (
-                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-xl">
                               {item.description}
                             </p>
                           )}
                         </div>
                       </div>
 
-                      <div className="relative w-full overflow-hidden rounded-2xl border border-slate-200/60 dark:border-white/10 bg-white dark:bg-slate-950 p-2 shadow-xs">
+                      <div className="relative w-full overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-950 p-2.5 shadow-xs group/img">
                         {item.imageUrl ? (
-                          <img 
-                            src={item.imageUrl} 
-                            alt={item.title}
-                            // 👈 CORREGIDO: max-h-[500px] sustituido por max-h-125 tal como pedía Tailwind
-                            className="w-full h-auto max-h-125 object-contain rounded-xl mx-auto"
-                            loading="lazy"
-                          />
+                          <div className="relative overflow-hidden rounded-xl bg-slate-50 dark:bg-slate-900">
+                            <img 
+                              src={item.imageUrl} 
+                              alt={item.title}
+                              className="w-full h-auto max-h-125 object-contain rounded-xl mx-auto transform transition-transform duration-500 group-hover/img:scale-[1.01]"
+                              loading="lazy"
+                            />
+                          </div>
                         ) : (
-                          <div className="p-8 text-center text-xs text-slate-400 italic">
-                            No se ha subido ningún archivo de imagen válido.
+                          <div className="p-12 text-center text-xs text-slate-400 dark:text-slate-500 italic font-medium">
+                            No se encuentra el archivo físico de la imagen.
                           </div>
                         )}
                       </div>
@@ -137,44 +179,42 @@ export default async function FolderDetailPage({ params }: PageProps) {
                   )
                 }
 
-                // --- COMPORTAMIENTO HABITUAL PARA ENLACES CLICKEABLES ---
+                // --- COMPORTAMIENTO PARA ELEMENTOS CON LINK (Sin badges a la derecha) ---
                 const targetHref = isPodcast && item.youtubeUrl
                   ? item.youtubeUrl
                   : isPodcast
                     ? `https://www.youtube.com/results?search_query=${encodeURIComponent(item.title || "")}`
-                    : isResource && item.fileUrl
+                    : isRecursoArchivo && item.fileUrl 
                       ? item.fileUrl
                       : `/${meta.path}/${item.slug}`
 
                 const linkContent = (
                   <>
-                    <div className="flex items-center gap-5 min-w-0 flex-1">
-                      <div className="h-11 w-11 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200/60 dark:border-white/10 flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform group-hover:border-blue-500/20 dark:group-hover:border-cyan-500/20">
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      {/* Icono de Item */}
+                      <div className="h-12 w-12 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-2xs shrink-0 transition-all duration-300 group-hover:scale-105 group-hover:-translate-y-0.5 group-hover:shadow-xs group-hover:border-slate-300 dark:group-hover:border-white/20">
                         {meta.icon}
                       </div>
                       
-                      <div className="min-w-0 flex-1 pr-5">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-base md:text-lg font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-blue-600 dark:group-hover:text-cyan-400 transition-colors">
-                            {item.title}
-                          </h3>
-                          <span className={`px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide rounded-md border shrink-0 hidden xs:inline-block ${meta.bg}`}>
-                            {meta.label}
-                          </span>
-                        </div>
-                        <p className="text-sm text-slate-400 dark:text-slate-500 truncate mt-1 font-mono">
-                          {isPodcast ? "youtube.com/watch" : isResource ? "cdn.sanity.io/files" : `${meta.path}/${item.slug}`}
+                      <div className="min-w-0 flex-1 pr-4">
+                        <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 truncate transition-colors group-hover:text-slate-950 dark:group-hover:text-white">
+                          {item.title}
+                        </h3>
+                        
+                        <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-1.5 font-mono tracking-tight bg-white/60 dark:bg-slate-950/40 px-2 py-0.5 rounded w-max max-w-full border border-slate-100 dark:border-none">
+                          {isPodcast ? "youtube.com/watch" : isRecursoArchivo ? "sanity.io/storage/cdn" : `${meta.path}/${item.slug}`}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-center h-10 w-10 rounded-xl border border-transparent group-hover:border-slate-200/60 dark:group-hover:border-white/10 bg-transparent group-hover:bg-white dark:group-hover:bg-slate-950 transition-all text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white shrink-0">
-                      <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-0.5" />
+                    {/* Botón de flecha interactivo */}
+                    <div className="flex items-center justify-center h-9 w-9 rounded-xl border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-slate-950 group-hover:border-slate-300 dark:group-hover:border-white/20 group-hover:bg-white dark:group-hover:bg-slate-900 shadow-2xs text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-all duration-300 shrink-0">
+                      <ArrowRight className="w-4 h-4 transition-transform duration-300 ease-out group-hover:translate-x-0.5" />
                     </div>
                   </>
                 )
 
-                const isExternal = isPodcast || isResource
+                const isExternal = isPodcast || isRecursoArchivo
 
                 if (isExternal) {
                   return (
@@ -183,7 +223,7 @@ export default async function FolderDetailPage({ params }: PageProps) {
                       href={targetHref}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group flex items-center justify-between p-5 transition-all duration-200 hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
+                      className="group flex items-center justify-between p-5 md:p-6 transition-all duration-300 hover:bg-white/60 dark:hover:bg-slate-900/30"
                     >
                       {linkContent}
                     </a>
@@ -194,7 +234,7 @@ export default async function FolderDetailPage({ params }: PageProps) {
                   <Link
                     key={item._id}
                     href={targetHref}
-                    className="group flex items-center justify-between p-5 transition-all duration-200 hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
+                    className="group flex items-center justify-between p-5 md:p-6 transition-all duration-300 hover:bg-white/60 dark:hover:bg-slate-900/30"
                   >
                     {linkContent}
                   </Link>

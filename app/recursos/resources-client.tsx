@@ -123,16 +123,7 @@ export default function ResourcesClient({ initialResources }: { initialResources
                   >
                     <ExternalLink className="h-4 w-4 text-muted-foreground" />
                   </a>
-                  <a
-                    href="https://www.facebook.com/agoraedu"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Visitar Facebook de AgoraEDU"
-                    title="AgoraEDU en Facebook"
-                    className="p-3.5 rounded-2xl border border-white/40 dark:border-white/10 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-700 transition-all backdrop-blur-sm"
-                  >
-                    <Facebook className="h-4 w-4 text-muted-foreground" />
-                  </a>
+                  
                 </div>
               </motion.div>
             )

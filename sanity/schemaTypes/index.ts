@@ -14,6 +14,7 @@ import examAttempt from './examAttempt'
 import userStreak from './userStreak'
 import carpeta from './carpeta'
 import recursoImagen from './recursoImagen'
+import recursoArchivo from './recursoArchivo'
 
 // 1. Definimos el array de tipos plano
 const types: SchemaTypeDefinition[] = [
@@ -32,6 +33,7 @@ const types: SchemaTypeDefinition[] = [
   examAttempt,
   userStreak,
   recursoImagen,
+  recursoArchivo,
 ]
 
 // 2. Exportamos exactamente la constante "schema" que busca tu sanity.config.ts

@@ -12,13 +12,13 @@ export default async function CarpetasPage() {
   const carpetas = await getCarpetas()
 
   return (
-    <main className="relative min-h-screen bg-white dark:bg-slate-950 pt-32 pb-24 transition-colors duration-500 overflow-hidden">
+    <main className="relative min-h-screen bg-white dark:bg-slate-950 pt-16 pb-24 transition-colors duration-500 overflow-hidden">
       
       {/* --- BACKGROUND TECH GRAPH --- */}
       <div 
         className="absolute inset-0 z-0 opacity-[0.08] dark:opacity-[0.15] pointer-events-none"
         style={{
-          backgroundImage: `linear-gradient(to right, #64748b 1px, transparent 1px), linear-gradient(to bottom, #64748b 1px, transparent 1px)`,
+          backgroundImage: `linear-gradient(to right, #64748b3b 1px, transparent 1px), linear-gradient(to bottom, #64748b34 1px, transparent 1px)`,
           backgroundSize: '3rem 3rem',
           maskImage: 'radial-gradient(circle 60% at 50% 30%, #000 40%, transparent 100%)',
         }}
@@ -34,10 +34,7 @@ export default async function CarpetasPage() {
         <div className="relative p-8 rounded-3xl border border-slate-200/60 dark:border-white/5 bg-slate-50/40 dark:bg-slate-900/10 backdrop-blur-md mb-12">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 text-[11px] font-black uppercase tracking-widest">
-                <Sparkles className="w-3 h-3 animate-pulse" />
-                Espacios de Trabajo
-              </div>
+              
               <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight sm:text-5xl font-serif">
                 Módulos de Aprendizaje
               </h1>
@@ -53,7 +50,7 @@ export default async function CarpetasPage() {
               </div>
               <div>
                 <div className="text-xs text-slate-400 font-medium">Colecciones</div>
-                <div className="text-lg font-black text-slate-800 dark:text-slate-200">{carpetas.length} Activas</div>
+                <div className="text-lg font-black text-slate-800 dark:text-slate-200">{carpetas.length}</div>
               </div>
             </div>
           </div>

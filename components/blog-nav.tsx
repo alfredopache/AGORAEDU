@@ -16,9 +16,9 @@ const navLinks = [
   { label: "Home", href: "/" },
   { label: "Blog", href: "/blog" },
   { label: "Proyectos", href: "/proyectos" },
+  { label: "Carpetas", href: "/carpetas" },
   { label: "Recursos", href: "/recursos" },
   { label: "Multimedia", href: "/multimedia" },
-  { label: "Carpetas", href: "/carpetas" },
   { label: "Acceso IA", href: "/eduia", special: true },
   { label: "Sobre nosotros", href: "/sobre-nosotros" },
 ]
@@ -45,41 +45,40 @@ export function BlogNav({ latestProject }: { latestProject?: LatestProject | nul
     <header className="fixed top-0 left-0 right-0 z-50 flex justify-center p-2 pointer-events-none">
       <nav 
         className={cn(
-          "pointer-events-auto relative flex items-center justify-between w-[98%] max-w-[1800px] mx-auto px-4 sm:px-8 transition-all duration-500 ease-in-out",
+          "pointer-events-auto relative flex items-center justify-between w-[98%] max-w-[1800px] mx-auto px-4 sm:px-6 xl:px-8 transition-all duration-500 ease-in-out",
           compactNav
             ? "py-3 rounded-[2rem] bg-white/90 dark:bg-slate-950/70 backdrop-blur-xl border border-slate-300 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.1)]" 
             : "py-5 rounded-none bg-transparent border-transparent"
         )}
       >
-        {/* LADO IZQUIERDO: Logo y Latest */}
-        <div className="flex items-center gap-6 mr-4 md:mr-6 lg:mr-8"> 
+        {/* LADO IZQUIERDO: Logo */}
+        <div className="flex items-center gap-4 xl:gap-8 shrink-0"> 
           <Magnetic>
             <Link
               href="/"
-              className="relative z-20 flex items-center font-serif text-2xl font-bold tracking-tighter shrink-0 block transition-colors duration-300 text-black dark:text-white"
+              className="relative z-20 flex items-center font-serif text-xl sm:text-2xl font-bold tracking-tighter transition-colors duration-300 text-black dark:text-white"
             >
               <Image
                 src="/images/logo.png"
                 alt="Logo"
-                width={40}
-                height={40}
-                className="mr-2"
+                width={36}
+                height={36}
+                className="mr-2 sm:w-[40px] sm:h-[40px]"
               />
               Agora<span className="text-blue-600 dark:text-blue-400">Edu</span>
             </Link>
           </Magnetic>
-
-          {/* Badge de 'latestProject' eliminado intencionalmente */}
         </div>
 
-        {/* CENTRO: Enlaces de navegación */}
+        {/* CENTRO: Enlaces de navegación (Cambia a flex en xl) */}
         <div className={cn(
-          "hidden md:flex items-center p-1 rounded-full border transition-all duration-500",
+          "hidden xl:flex items-center p-1 rounded-full border transition-all duration-500 max-w-max mx-2",
           compactNav
             ? "bg-slate-200/50 dark:bg-white/5 border-slate-300 dark:border-white/5 backdrop-blur-sm" 
             : "bg-black/5 border-black/10 dark:bg-white/5 dark:border-white/10 backdrop-blur-sm"
         )}>
-          <ul className="flex items-center gap-1">
+          {/* gap-0.5 y padding horizontal optimizado para prevenir rupturas en pantallas de 1280px */}
+          <ul className="flex items-center gap-0.5 lg:gap-1">
             {navLinks.map((link) => {
               const isActive = pathname === link.href
               const isSpecial = link.special
@@ -88,7 +87,7 @@ export function BlogNav({ latestProject }: { latestProject?: LatestProject | nul
                   <Link
                     href={link.href}
                     className={cn(
-                      "px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all rounded-full relative z-10 block whitespace-nowrap",
+                      "px-3 lg:px-4 py-2 text-[10px] lg:text-[11px] font-black uppercase tracking-widest transition-all rounded-full relative z-10 block whitespace-nowrap",
                       isSpecial
                         ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg hover:shadow-xl hover:scale-105"
                         : isActive
@@ -114,16 +113,16 @@ export function BlogNav({ latestProject }: { latestProject?: LatestProject | nul
           </ul>
         </div>
 
-        {/* LADO DERECHO: Theme y Admin */}
-        <div className="flex items-center gap-3">
-          <div className="hidden md:block">
+        {/* LADO DERECHO: Theme y Autenticación */}
+        <div className="flex items-center gap-2 xl:gap-3 shrink-0">
+          <div className="hidden xl:block">
             <AdminLink />
           </div>
-          <div className="hidden md:block">
+          <div className="hidden xl:block">
             <GoogleSignIn />
           </div>
           <div className={cn(
-            "hidden md:flex p-1 rounded-full border transition-all",
+            "hidden xl:flex p-1 rounded-full border transition-all",
             compactNav
               ? "bg-white dark:bg-white/5 border-slate-300 dark:border-white/10 shadow-sm" 
               : "bg-black/5 border-black/10 dark:bg-white/10 dark:border-white/20"
@@ -131,7 +130,8 @@ export function BlogNav({ latestProject }: { latestProject?: LatestProject | nul
             <ThemeSelector />
           </div>
           
-          <div className="md:hidden flex items-center gap-2">
+          {/* Menú de control alternativo para tabletas y smartphones (Visible por debajo de xl) */}
+          <div className="xl:hidden flex items-center gap-2">
             <ThemeSelector />
             <button
               onClick={() => setIsOpen(!isOpen)}
@@ -141,20 +141,21 @@ export function BlogNav({ latestProject }: { latestProject?: LatestProject | nul
                   ? "bg-white dark:bg-slate-900 border-slate-300 dark:border-white/10 text-black dark:text-white" 
                   : "bg-black/5 border-black/10 dark:bg-white/10 dark:border-white/20 text-black dark:text-white backdrop-blur-md"
               )}
+              aria-label="Alternar menú de navegación"
             >
               {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
 
-        {/* Menú Móvil */}
+        {/* Menú Desplegable Móvil y Tablet */}
         <AnimatePresence>
           {isOpen && (
             <motion.div 
               initial={{ opacity: 0, y: -20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              className="absolute top-[calc(100%+1rem)] left-0 right-0 rounded-[2.5rem] border border-slate-300 dark:border-white/10 bg-white dark:bg-slate-950/95 backdrop-blur-2xl p-8 md:hidden shadow-2xl z-50 pointer-events-auto"
+              className="absolute top-[calc(100%+1rem)] left-0 right-0 rounded-[2.5rem] border border-slate-300 dark:border-white/10 bg-white dark:bg-slate-950/95 backdrop-blur-2xl p-8 xl:hidden shadow-2xl z-50 pointer-events-auto"
             >
               <div className="flex flex-col gap-6">
                 <ul className="flex flex-col gap-1">
@@ -178,10 +179,10 @@ export function BlogNav({ latestProject }: { latestProject?: LatestProject | nul
                     </li>
                   ))}
                 </ul>
-                  <AdminLink />
-                  <div className="pt-2">
-                    <GoogleSignIn />
-                  </div>
+                <AdminLink />
+                <div className="pt-2">
+                  <GoogleSignIn />
+                </div>
               </div>
             </motion.div>
           )}

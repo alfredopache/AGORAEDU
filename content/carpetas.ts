@@ -2,12 +2,12 @@ import { client } from '@/lib/sanity'
 
 export interface CarpetaItem {
   _id: string
-  _type: 'blog' | 'post' | 'project' | 'resource' | 'podcast' | 'recursoImagen' 
+  _type: 'blog' | 'post' | 'project' | 'recursoArchivo' | 'podcast' | 'recursoImagen' 
   title: string
   slug: string
   youtubeUrl?: string 
   imageUrl?: string 
-  fileUrl?: string // 👈 Añadido para guardar la URL del PDF/documento descargable
+  fileUrl?: string 
   description?: string
 }
 
@@ -16,7 +16,10 @@ export interface Carpeta {
   title: string
   slug: string
   description?: string
-  color: 'blue' | 'indigo' | 'cyan' | 'purple' | 'emerald'
+  // 🎨 Lista ampliada con nuevos colores cálidos y variantes de fríos
+  color: 
+    | 'blue' | 'indigo' | 'cyan' | 'purple' | 'violet' | 'fuchsia' | 'pink' | 'rose'
+    | 'emerald' | 'amber' | 'orange' | 'red'
   items: CarpetaItem[]
 }
 
@@ -35,7 +38,7 @@ export async function getCarpetas(): Promise<Carpeta[]> {
       "slug": slug.current,
       youtubeUrl,
       "imageUrl": imageFile.asset->url,
-      "fileUrl": file.asset->url, // 👈 Extrae la URL directa del archivo en Sanity
+      "fileUrl": file.asset->url, 
       description
     }
   }`
@@ -59,7 +62,7 @@ export async function getCarpetaBySlug(slug: string): Promise<Carpeta | null> {
       "slug": slug.current,
       youtubeUrl,
       "imageUrl": imageFile.asset->url,
-      "fileUrl": file.asset->url, // 👈 Extrae la URL directa del archivo en Sanity
+      "fileUrl": file.asset->url, 
       description
     }
   }`
