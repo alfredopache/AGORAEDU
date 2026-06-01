@@ -22,6 +22,7 @@ import { cn, clampRedactionText, getWordCount, getLineCount, MAX_REDACTION_LINES
 import { CableMatch, isMatchingQuestion, extractMatchPairsFromOptions } from "./cable-match"
 import { PdfReferenceImage } from "./pdf-reference-image"
 import { downloadPracticeExamPdf } from "@/lib/practice-exam-pdf"
+import { getPreferredDifficulty, type FpLevel } from "@/lib/fp-level"
 
 const motion = motionBase as any
 
@@ -55,6 +56,7 @@ interface UserAnswer {
 
 interface ExamModeProps {
   sessionId: string
+  fpLevel?: FpLevel
 }
 
 type ExamState = "setup" | "taking" | "results"
@@ -71,7 +73,7 @@ const SUBJECT_OPTIONS = [
 const DEFAULT_DATASET_FILE = "W5_dataset_ACCESO_IA_examenes_2017_2025_v3_GOLD_INFRA_READY.json"
 const QUESTIONS_PER_SUBJECT = 5
 
-export function ExamMode({ sessionId }: ExamModeProps) {
+export function ExamMode({ sessionId, fpLevel = "gm" }: ExamModeProps) {
   const [examState, setExamState] = useState<ExamState>("setup")
   const [selectedSubject, setSelectedSubject] = useState<string>("")
   const [selectedCustomSubjects, setSelectedCustomSubjects] = useState<string[]>(SUBJECT_OPTIONS.map((subject) => subject.value))
@@ -112,7 +114,7 @@ export function ExamMode({ sessionId }: ExamModeProps) {
     }
     return { type: 'text', value: img }
   }
-  const selectedDifficulty = "intermedio"
+  const selectedDifficulty = getPreferredDifficulty(fpLevel)
   const questionCount = QUESTIONS_PER_SUBJECT
   const [secondsPerQuestion] = useState<number>(90)
   

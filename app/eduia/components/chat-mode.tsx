@@ -8,15 +8,20 @@ import { cn } from "@/lib/utils"
 import { downloadPracticeExamPdf } from "@/lib/practice-exam-pdf"
 import GoogleSignIn from "@/components/google-signin"
 import { getEduIAPlan, type EduIAPlanId } from "@/lib/eduia-plans"
+import { getFpLevelLabel, type FpLevel } from "@/lib/fp-level"
 
 const motion = motionBase as any
 import { MarkdownRenderer } from "./markdown-renderer"
+import { ExamQuestionMessage } from "./exam-question-message"
 import { InteractiveExam, ExamResultsView } from "./interactive-exam"
+import { isExamQuestionMessage, type ExamQuestionItem } from "@/lib/exam-question-format"
 
 interface Message {
   role: "user" | "assistant"
   content: string
   timestamp: Date
+  examQuestions?: ExamQuestionItem[]
+  examSource?: string
 }
 
 interface OfficialDownloadGroup {
@@ -37,6 +42,7 @@ interface ChatModeProps {
   sessionId: string
   conversationId: string | null
   selectedPlanId: EduIAPlanId
+  fpLevel: FpLevel
   onConversationSaved: (conversationId?: string | null) => void
   onDeleteConversation?: (conversationId: string, title?: string) => void
 }
@@ -252,7 +258,7 @@ const ITINERARY_LABELS: Record<Itinerary, string> = {
   eso: "Refuerzo de ESO",
 }
 
-export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversationSaved, onDeleteConversation }: ChatModeProps) {
+export function ChatMode({ sessionId, conversationId, selectedPlanId, fpLevel, onConversationSaved, onDeleteConversation }: ChatModeProps) {
   const { data: session, status } = useSession()
   const activePlan = getEduIAPlan(selectedPlanId)
   const [messages, setMessages] = useState<Message[]>([])
@@ -381,6 +387,10 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
       if (gm) setSelectedDataset(gm)
     }
   }, [datasets, selectedSubGoal])
+
+  useEffect(() => {
+    setSelectedSubGoal(fpLevel)
+  }, [fpLevel])
 
   useEffect(() => {
     const shouldLoad =
@@ -844,6 +854,8 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
           role: msg.role,
           content: msg.content,
           timestamp: new Date(msg.timestamp),
+          examQuestions: msg.examQuestions,
+          examSource: msg.examSource,
         }))
         setMessages(loadedMessages)
       }
@@ -945,13 +957,36 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
     setIsLoading(true)
 
     try {
+      const excludeQuestionIds = [
+        ...new Set(
+          messages.flatMap((m) =>
+            m.examQuestions?.map((q) => q.sourceId).filter((id): id is string => Boolean(id)) ?? [],
+          ),
+        ),
+      ]
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: updatedMessages, scope: selectedScope, userProfile, planId: selectedPlanId }),
+        body: JSON.stringify({
+          messages: updatedMessages,
+          scope: selectedScope,
+          userProfile: userProfile
+            ? { ...userProfile, itinerary: fpLevel }
+            : { itinerary: fpLevel },
+          planId: selectedPlanId,
+          fpLevel,
+          excludeQuestionIds,
+        }),
       })
       const data = await response.json()
-      const final = [...updatedMessages, { role: "assistant", content: data.message, timestamp: new Date() } as Message]
+      const final = [...updatedMessages, {
+        role: "assistant",
+        content: data.message,
+        examQuestions: data.examQuestions,
+        examSource: data.source,
+        timestamp: new Date(),
+      } as Message]
       setMessages(final)
       await saveConversation(final)
     } catch (error) {
@@ -971,7 +1006,7 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
   const handleSimOption = (topic: string) => {
     setShowSimMenu(false)
     if (topic.toLowerCase() === "mixto") {
-      const levelText = selectedSubGoal === "gs" ? "Grado Superior" : "Grado Medio"
+      const levelText = fpLevel === "gs" ? "Grado Superior" : "Grado Medio"
       sendMessage(`Hazme un examen mixto de 36 preguntas de ${levelText} con todas las asignaturas.`)
     } else {
       sendMessage(`Hazme un examen de 36 preguntas de ${topic}.`)
@@ -1001,7 +1036,7 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
         seed: String(Math.floor(Math.random() * 1e9)),
       })
       if (selectedGoal === "fp") {
-        const preset = selectedSubGoal === "gs" ? "gradoSuperior" : "gradoMedio"
+        const preset = fpLevel === "gs" ? "gradoSuperior" : "gradoMedio"
         params.set("preset", preset)
       }
       if (selectedDataset) {
@@ -1032,9 +1067,7 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
   const buildContextLabel = () => {
     const parts: string[] = []
     if (selectedGoal === "fp") {
-      parts.push("la prueba de acceso a FP")
-      if (selectedSubGoal === "gm") parts.push("Grado Medio")
-      else if (selectedSubGoal === "gs") parts.push("Grado Superior")
+      parts.push(getFpLevelLabel(fpLevel))
     } else if (selectedGoal === "basico") {
       parts.push("los ámbitos de Grado Básico")
     } else if (selectedGoal === "eso") {
@@ -1126,6 +1159,7 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
                 {messages.map((m, i) => {
                   const prevMsg = messages[i - 1]
                   const isGrouped = prevMsg?.role === m.role
+                  const isExamMsg = m.role === "assistant" && isExamQuestionMessage(m.content, m.examQuestions)
                   return (
                     <div key={i} className={cn("flex w-full", m.role === "user" ? "justify-end" : "justify-start items-end gap-2", isGrouped ? "mt-1" : "mt-4")}>
                       {m.role === "assistant" && (
@@ -1142,7 +1176,7 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         transition={{ type: "spring", stiffness: 400, damping: 32 }}
                         className={cn(
-                          "max-w-[78%] px-4 py-2.5",
+                          isExamMsg ? "max-w-[92%] px-3 py-3" : "max-w-[78%] px-4 py-2.5",
                           m.role === "user"
                             ? selectedPlanId === "university"
                               ? "bg-gradient-to-br from-cyan-500 to-blue-600 text-white rounded-[20px] rounded-tr-[5px] shadow-md shadow-cyan-500/20"
@@ -1151,7 +1185,15 @@ export function ChatMode({ sessionId, conversationId, selectedPlanId, onConversa
                         )}
                       >
                         {m.role === "assistant"
-                          ? <MarkdownRenderer content={m.content} />
+                          ? isExamQuestionMessage(m.content, m.examQuestions)
+                            ? (
+                              <ExamQuestionMessage
+                                questions={m.examQuestions}
+                                content={m.content}
+                                source={m.examSource}
+                              />
+                            )
+                            : <MarkdownRenderer content={m.content} />
                           : <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.content}</p>
                         }
                       </motion.div>

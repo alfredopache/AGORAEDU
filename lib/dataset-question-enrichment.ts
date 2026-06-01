@@ -396,6 +396,50 @@ export function enrichDatasetQuestion(item: any, parsedOptions: string[] = [], v
     return pickVariant(variants, seed, variantOffset)
   }
 
+  // Lengua – comentario de texto (tema, tesis, estructura)
+  if (subject.includes("leng") && (topic.includes("comentario") || question.includes("comentario de texto") || question.includes("tema del texto") || question.includes("tesis del autor") || question.includes("idea principal"))) {
+    const variants = [
+      {
+        question: "Al comentar un texto de opinion, ¿que debes identificar en primer lugar?",
+        options: ["La tesis o idea principal que defiende el autor", "El numero exacto de parrafos del texto", "La biografia completa del autor", "Todos los sinonimos del vocabulario"],
+        correctIndex: 0,
+        explanation: "En un comentario de texto el primer paso es localizar la tesis: la postura o idea central que el autor quiere transmitir.",
+      },
+      {
+        question: "¿Que diferencia hay entre 'tema' y 'tesis' en un comentario de texto?",
+        options: ["El tema es el asunto general; la tesis es la opinion concreta del autor sobre ese asunto", "El tema y la tesis son siempre lo mismo", "La tesis es el titulo; el tema es el resumen", "El tema solo aparece en textos narrativos"],
+        correctIndex: 0,
+        explanation: "El tema es el campo de reflexion (p. ej. la educacion). La tesis es la posicion del autor (p. ej. 'la educacion publica debe ser gratuita').",
+      },
+      {
+        question: "En un comentario de texto argumentativo, ¿que funcion cumplen los ejemplos o datos?",
+        options: ["Apoyar y reforzar la tesis del autor", "Sustituir la tesis principal del texto", "Indicar que el texto es narrativo", "Mostrar errores ortograficos del autor"],
+        correctIndex: 0,
+        explanation: "Los argumentos, ejemplos y datos sirven para justificar la tesis. Sin ellos, la opinion del autor quedaria sin fundamento.",
+      },
+    ]
+    return pickVariant(variants, seed, variantOffset)
+  }
+
+  // Lengua – redaccion / produccion escrita
+  if (subject.includes("leng") && (topic.includes("redacc") || topic.includes("escritura") || question.includes("redacta") || question.includes("escribe un texto") || question.includes("produccion escrita"))) {
+    const variants = [
+      {
+        question: "¿Cual es la estructura minima recomendada en una redaccion de acceso?",
+        options: ["Introduccion, desarrollo y conclusion", "Solo titulo y lista de ideas", "Un unico parrafo largo sin divisiones", "Indice, bibliografia y anexos obligatorios"],
+        correctIndex: 0,
+        explanation: "Una redaccion debe organizarse en introduccion (planteamiento), desarrollo (argumentos o explicacion) y conclusion (cierre o sintesis).",
+      },
+      {
+        question: "Al redactar un texto argumentativo, ¿que conviene hacer en la introduccion?",
+        options: ["Presentar el tema y la tesis que vas a defender", "Dar la conclusion final del texto", "Copiar literalmente el enunciado del examen", "Incluir solo ejemplos sin planteamiento"],
+        correctIndex: 0,
+        explanation: "La introduccion orienta al lector: presenta el asunto y deja clara tu postura o tesis desde el inicio.",
+      },
+    ]
+    return pickVariant(variants, seed, variantOffset)
+  }
+
   // Lengua – literatura / figuras retoricas / autores
   if (subject.includes("leng") && (topic.includes("literatura") || topic.includes("figura") || topic.includes("retorica") || topic.includes("metafora") || question.includes("figura literaria") || question.includes("recurso estilistico"))) {
     const variants = [
