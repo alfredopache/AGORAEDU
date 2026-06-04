@@ -71,7 +71,7 @@ function buildFileName(pack: PracticeExamPack) {
 export async function downloadPracticeExamPdf(pack: PracticeExamPack) {
   const { jsPDF } = await import("jspdf")
   const doc = new jsPDF({ unit: "pt", format: "a4" })
-  const margin = 44
+  const margin = 64
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
   const contentWidth = pageWidth - margin * 2
@@ -79,14 +79,56 @@ export async function downloadPracticeExamPdf(pack: PracticeExamPack) {
   const subjectSummary = groupedQuestions.map((group) => group.label).join(", ")
   let y = margin
 
+  // Load AgoraEdu logo for embedding in the PDF
+  let logoDataUrl: string | null = null
+  try {
+    const logoResponse = await fetch("/images/logo.png")
+    const logoBlob = await logoResponse.blob()
+    logoDataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(logoBlob)
+    })
+  } catch {
+    logoDataUrl = null
+  }
+
+  // Pre-compute logo dimensions (maintain aspect ratio)
+  let logoHeaderW = 0, logoHeaderH = 0, logoCoverW = 0, logoCoverH = 0
+  if (logoDataUrl) {
+    try {
+      const props = doc.getImageProperties(logoDataUrl)
+      // Header: fixed height 22pt, width proportional
+      logoHeaderH = 22
+      logoHeaderW = Math.round((props.width * logoHeaderH) / props.height)
+      // Cover: fixed width 180pt, height proportional
+      logoCoverW = 180
+      logoCoverH = Math.round((props.height * logoCoverW) / props.width)
+    } catch {
+      logoDataUrl = null
+    }
+  }
+
   const addPageHeader = () => {
     const pageNumber = doc.getNumberOfPages()
-    doc.setFont("helvetica", "bold")
-    doc.setFontSize(10)
-    doc.text(`AgoraEdu - Examen de práctica acceso a Grado Medio`, margin, 28)
+    if (logoDataUrl) {
+      doc.addImage(logoDataUrl, "PNG", margin, 10, logoHeaderW, logoHeaderH)
+    } else {
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(10)
+      doc.text("AgoraEdu - Examen de práctica acceso a Grado Medio", margin, 28)
+    }
     doc.setFont("helvetica", "normal")
     doc.setFontSize(9)
-    doc.text(`Página ${pageNumber}`, pageWidth - margin, 28, { align: "right" })
+    doc.setTextColor(80, 80, 80)
+    doc.text(`Página ${pageNumber}`, pageWidth - margin, 26, { align: "right" })
+    doc.setTextColor(0, 0, 0)
+    // Thin separator line below header
+    doc.setDrawColor(210, 210, 210)
+    doc.setLineWidth(0.5)
+    doc.line(margin, 38, pageWidth - margin, 38)
+    doc.setDrawColor(0, 0, 0)
     y = margin
   }
 
@@ -186,6 +228,12 @@ export async function downloadPracticeExamPdf(pack: PracticeExamPack) {
       addWrappedText(question.answerText, 11, 16, 8, 30)
       addWrappedText(`Explicacion: ${question.explanation}`, 10, 14, 12, 14)
     }
+  }
+
+  // Cover: prominent logo centered above the main title
+  if (logoDataUrl) {
+    doc.addImage(logoDataUrl, "PNG", (pageWidth - logoCoverW) / 2, y, logoCoverW, logoCoverH)
+    y += logoCoverH + 18
   }
 
   doc.setFont("helvetica", "bold")

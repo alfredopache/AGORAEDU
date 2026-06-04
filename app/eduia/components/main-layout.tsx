@@ -12,6 +12,14 @@ import { ExamMode } from "./exam-mode"
 import { ConversationSidebar } from "./conversation-sidebar"
 import { StreakBadge } from "@/components/streak-badge"
 import { DEFAULT_EDUIA_PLAN, EDUIA_PLAN_STORAGE_KEY, getEduIAPlan, type EduIAPlanId } from "@/lib/eduia-plans"
+import {
+  FP_LEVELS,
+  FP_LEVEL_STORAGE_KEY,
+  isFpLevel,
+  readStoredFpLevel,
+  storeFpLevel,
+  type FpLevel,
+} from "@/lib/fp-level"
 
 type Mode = "chat" | "exam"
 
@@ -33,6 +41,7 @@ export function EduIAMainLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [sessionId, setSessionId] = useState<string>("")
   const [deleteCandidate, setDeleteCandidate] = useState<{ id: string; title?: string } | null>(null)
+  const [fpLevel, setFpLevel] = useState<FpLevel>("gm")
 
   // Generar session ID único
   useEffect(() => {
@@ -63,7 +72,13 @@ export function EduIAMainLayout() {
       setSelectedPlanId(storedPlan)
     }
 
+    setFpLevel(readStoredFpLevel())
+
     const onStorage = (event: StorageEvent) => {
+      if (event.key === FP_LEVEL_STORAGE_KEY && isFpLevel(event.newValue)) {
+        setFpLevel(event.newValue)
+        return
+      }
       if (event.key !== EDUIA_PLAN_STORAGE_KEY) return
       const nextPlan = event.newValue
       if (nextPlan === "education" || nextPlan === "university" || nextPlan === "master") {
@@ -89,6 +104,11 @@ export function EduIAMainLayout() {
     const next = planOrder[(idx + 1) % planOrder.length]
     try { localStorage.setItem(EDUIA_PLAN_STORAGE_KEY, next) } catch {}
     setSelectedPlanId(next)
+  }
+
+  const handleFpLevelChange = (level: FpLevel) => {
+    setFpLevel(level)
+    storeFpLevel(level)
   }
 
   const loadConversations = async (sid?: string) => {
@@ -232,13 +252,36 @@ export function EduIAMainLayout() {
           {/* Header con modo selector */}
           <div className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-4">
             <div className="flex items-center justify-between max-w-7xl mx-auto">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 flex-wrap">
                 <button
                   onClick={() => setSidebarOpen(true)}
                   className="lg:hidden p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
                 >
                   <Menu className="w-5 h-5" />
                 </button>
+
+                <div className="flex items-center gap-1 rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200/80 dark:border-slate-700/80">
+                  {FP_LEVELS.map((level) => (
+                    <button
+                      key={level.id}
+                      type="button"
+                      onClick={() => handleFpLevelChange(level.id)}
+                      title={level.label}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all",
+                        fpLevel === level.id
+                          ? level.id === "gs"
+                            ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm shadow-blue-500/25"
+                            : "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm shadow-emerald-500/25"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/70 dark:hover:bg-slate-700/60"
+                      )}
+                    >
+                      <span>{level.emoji}</span>
+                      <span className="hidden sm:inline">{level.shortLabel}</span>
+                    </button>
+                  ))}
+                </div>
+
                   <div className="flex items-center gap-2">
                     <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-2 rounded-xl">
                       <span className="text-2xl">🤖</span>
@@ -317,6 +360,7 @@ export function EduIAMainLayout() {
                   sessionId={sessionId}
                   conversationId={currentConversationId}
                   selectedPlanId={selectedPlanId}
+                  fpLevel={fpLevel}
                   onConversationSaved={handleConversationSaved}
                   onDeleteConversation={openDeleteConfirmation}
                 />
@@ -324,6 +368,7 @@ export function EduIAMainLayout() {
                 <ExamMode
                   key="exam"
                   sessionId={sessionId}
+                  fpLevel={fpLevel}
                 />
               )}
             </AnimatePresence>

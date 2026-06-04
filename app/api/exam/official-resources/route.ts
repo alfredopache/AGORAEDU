@@ -7,6 +7,7 @@ type ResourceItem = {
   path: string
   topic: string
   sizeKb: number
+  year?: number | null
 }
 
 type ResourceGroup = {
@@ -37,10 +38,14 @@ function extractYear(filename: string): number | null {
   return null
 }
 
+function itemYear(item: ResourceItem): number | null {
+  return item.year ?? extractYear(item.filename) ?? extractYear(item.topic)
+}
+
 function sortByYear(items: ResourceItem[]): ResourceItem[] {
   return [...items].sort((a, b) => {
-    const ya = extractYear(a.filename) ?? extractYear(a.topic)
-    const yb = extractYear(b.filename) ?? extractYear(b.topic)
+    const ya = itemYear(a)
+    const yb = itemYear(b)
     if (ya !== null && yb !== null) return ya - yb
     if (ya !== null) return -1
     if (yb !== null) return 1
@@ -102,7 +107,7 @@ function mapGroup(key: IndexKey, items: ResourceItem[], note?: string, grade?: "
       topic: item.topic,
       sizeKb: item.sizeKb,
       downloadUrl: buildDownloadUrl(item.path),
-      year: extractYear(item.filename) ?? extractYear(item.topic),
+      year: itemYear(item),
     })),
   }
 }

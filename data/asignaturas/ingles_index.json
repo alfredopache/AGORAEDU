@@ -9,55 +9,64 @@
       "filename": "A2 INGLES.pdf",
       "path": "data/asignaturas/Ingles/A2 INGLES.pdf",
       "topic": "A2 INGLES",
-      "sizeKb": 154
+      "sizeKb": 154,
+      "year": 2017
     },
     {
       "filename": "Lengua extrangera ingles.pdf",
       "path": "data/asignaturas/Ingles/Lengua extrangera ingles.pdf",
       "topic": "Lengua extrangera ingles",
-      "sizeKb": 169
+      "sizeKb": 169,
+      "year": 2020
     },
     {
       "filename": "Lengua extranjera ingles.pdf",
       "path": "data/asignaturas/Ingles/Lengua extranjera ingles.pdf",
       "topic": "Lengua extranjera ingles",
-      "sizeKb": 121
+      "sizeKb": 121,
+      "year": 2019
     },
     {
       "filename": "Parte común inglés (2).pdf",
       "path": "data/asignaturas/Ingles/Parte común inglés (2).pdf",
       "topic": "Parte Común",
-      "sizeKb": 144
+      "sizeKb": 144,
+      "year": 2024
     },
     {
       "filename": "Parte común inglés (3).pdf",
       "path": "data/asignaturas/Ingles/Parte común inglés (3).pdf",
       "topic": "Parte Común",
-      "sizeKb": 112
+      "sizeKb": 112,
+      "year": 2025
     },
     {
       "filename": "Parte comun ingles.pdf",
       "path": "data/asignaturas/Ingles/Parte comun ingles.pdf",
       "topic": "Parte Común",
-      "sizeKb": 147
+      "sizeKb": 147,
+      "year": 2021
     },
     {
       "filename": "Parte comun inglés.pdf",
       "path": "data/asignaturas/Ingles/Parte comun inglés.pdf",
       "topic": "Parte Común",
-      "sizeKb": 267
+      "sizeKb": 267,
+      "year": 2021
     },
     {
       "filename": "Parte común inglés.pdf",
       "path": "data/asignaturas/Ingles/Parte común inglés.pdf",
       "topic": "Parte Común",
-      "sizeKb": 126
+      "sizeKb": 126,
+      "year": 2023
     },
     {
       "filename": "Parte común Lengua extranjera ingles.pdf",
       "path": "data/asignaturas/Ingles/Parte común Lengua extranjera ingles.pdf",
       "topic": "Parte Común",
-      "sizeKb": 75
+      "sizeKb": 75,
+      "year": 2018
     }
   ]
 }
