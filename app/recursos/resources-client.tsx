@@ -31,7 +31,7 @@ export default function ResourcesClient({ initialResources }: { initialResources
   const [searchTerm, setSearchTerm] = useState('')
 
   const getFileConfig = (ext: string) => {
-    const e = ext.toLowerCase()
+    const e = ext?.toLowerCase() ?? ''
     if (e === 'pdf') return { icon: <FileText />, color: 'text-red-500', bg: 'bg-red-500/10' }
     if (e === 'pptx' || e === 'ppt') return { icon: <FileGeneric />, color: 'text-orange-500', bg: 'bg-orange-500/10' }
     if (e === 'docx' || e === 'doc') return { icon: <FileText />, color: 'text-blue-500', bg: 'bg-blue-500/10' }
@@ -40,9 +40,11 @@ export default function ResourcesClient({ initialResources }: { initialResources
     return { icon: <FileGeneric />, color: 'text-slate-500', bg: 'bg-slate-500/10' }
   }
 
-  const filteredResources = initialResources.filter(res =>
-    res.title.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredResources = initialResources
+    .filter(res => res.title && res.extension)
+    .filter(res =>
+      res.title.toLowerCase().includes(searchTerm.toLowerCase())
+    )
 
   return (
     <div className="space-y-12">
@@ -123,7 +125,6 @@ export default function ResourcesClient({ initialResources }: { initialResources
                   >
                     <ExternalLink className="h-4 w-4 text-muted-foreground" />
                   </a>
-                  
                 </div>
               </motion.div>
             )
